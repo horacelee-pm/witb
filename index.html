@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WITB — What's in the Bag</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+    // Apply theme before paint to avoid flash
+    (function () {
+      const saved = localStorage.getItem('witb.theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (saved === 'dark' || (!saved && prefersDark)) document.documentElement.classList.add('dark');
+    })();
+  </script>
+  <style>
+    /* Smoother focus rings + drag affordances */
+    .drag-over { outline: 2px dashed rgb(34 197 94); outline-offset: -6px; background-color: rgb(34 197 94 / 0.06); }
+    .dragging { opacity: 0.4; }
+    .club-card { touch-action: manipulation; }
+    /* Hide scrollbar polish on mobile sections */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes bag-flash {
+      0%   { box-shadow: 0 0 0 2px rgb(16 185 129), 0 0 10px rgb(16 185 129 / 0.35); }
+      100% { box-shadow: 0 0 0 0 transparent; }
+    }
+    .bag-item-flash { animation: bag-flash 0.9s ease-out forwards; }
+  </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased">
+
+  <!-- ============== HEADER ============== -->
+  <header class="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-lg bg-emerald-600 grid place-items-center text-white font-bold shadow-sm">⛳</div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-semibold tracking-tight">What's in the Bag</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Your golf inventory & current setup</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="bagCounter" class="text-xs sm:text-sm font-medium px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+          0 / 14 in bag
+        </span>
+        <button id="addClubBtn" class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-3 py-1.5 shadow-sm transition">
+          <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+          <span class="hidden sm:inline">Add club</span>
+        </button>
+        <button id="themeBtn" title="Toggle theme" class="rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <svg class="w-5 h-5 hidden dark:block" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.95 2.05a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-2.05 4.95a1 1 0 01-1.414 0l-.707-.707a1 1 0 111.414-1.414l.707.707a1 1 0 010 1.414zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-5.657-1.05a1 1 0 010-1.414l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414 0zM4 10a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1zm1.05-5.657a1 1 0 011.414 0l.707.707A1 1 0 015.757 6.464l-.707-.707a1 1 0 010-1.414zM10 6a4 4 0 100 8 4 4 0 000-8z"/></svg>
+          <svg class="w-5 h-5 dark:hidden" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============== MAIN ============== -->
+  <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Current Bag (drop zone) -->
+    <section class="lg:col-span-5 xl:col-span-5">
+      <div class="flex items-center justify-between mb-3 gap-3">
+        <h2 class="text-base font-semibold tracking-tight">Current Bag</h2>
+        <div class="flex items-center gap-3">
+          <button id="saveBagBtn" class="text-xs font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300">Save bag</button>
+          <button id="clearBagBtn" class="text-xs text-slate-500 hover:text-rose-600 dark:hover:text-rose-400">Clear bag</button>
+        </div>
+      </div>
+
+      <!-- Saved bag chips -->
+      <div id="savedBagsWrap" class="mb-3 hidden">
+        <div class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Saved bags</div>
+        <div id="savedBagsList" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <div id="bagDropZone"
+           class="rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 min-h-[300px] p-3 sm:p-4 transition">
+        <div id="bagEmpty" class="text-center py-12 text-slate-400 dark:text-slate-500">
+          <div class="text-4xl mb-2">🏌️</div>
+          <div class="text-sm">Drag clubs from your inventory into the bag</div>
+          <div class="text-xs mt-1 opacity-75">Or tap the + on any inventory card</div>
+        </div>
+        <div id="bagList" class="space-y-4"></div>
+      </div>
+    </section>
+
+    <!-- Inventory -->
+    <section class="lg:col-span-7 xl:col-span-7">
+      <div class="flex items-center justify-between mb-3 gap-2 flex-wrap">
+        <h2 class="text-base font-semibold tracking-tight">Inventory <span id="invCount" class="text-slate-400 font-normal">(0)</span></h2>
+        <div class="flex items-center gap-2">
+          <input id="searchInput" type="search" placeholder="Search…" class="text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 w-40 sm:w-56 focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          <select id="categoryFilter" class="text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="">All</option>
+            <option>Driver</option><option>Wood</option><option>Hybrid</option>
+            <option>Iron Set</option><option>Iron</option><option>Wedge</option><option>Putter</option>
+          </select>
+          <div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 overflow-hidden text-slate-500 dark:text-slate-400">
+            <button data-view-btn="card" id="viewCardBtn" title="Card view" class="px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3h6v6H3V3zm0 8h6v6H3v-6zm8-8h6v6h-6V3zm0 8h6v6h-6v-6z"/></svg>
+            </button>
+            <button data-view-btn="list" id="viewListBtn" title="List view" class="px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition border-l border-slate-300 dark:border-slate-700">
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4h14a1 1 0 110 2H3a1 1 0 110-2zm0 5h14a1 1 0 110 2H3a1 1 0 110-2zm0 5h14a1 1 0 110 2H3a1 1 0 110-2z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="inventoryList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      <div id="invEmpty" class="hidden text-center py-12 text-slate-400 dark:text-slate-500 border border-dashed rounded-2xl border-slate-300 dark:border-slate-700">
+        <div class="text-4xl mb-2">🎒</div>
+        <div class="text-sm">No clubs in your inventory yet.</div>
+        <button onclick="document.getElementById('addClubBtn').click()" class="mt-3 text-emerald-600 hover:text-emerald-700 text-sm font-medium">Add your first club →</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============== ADD/EDIT MODAL ============== -->
+  <div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <h3 id="modalTitle" class="font-semibold">Add club</h3>
+        <button id="modalClose" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+          <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+        </button>
+      </div>
+      <form id="clubForm" class="p-5 space-y-4">
+        <input type="hidden" name="id"/>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block col-span-2 sm:col-span-1">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Brand</span>
+            <input name="brand" required placeholder="TaylorMade" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          </label>
+          <label class="block col-span-2 sm:col-span-1">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Model</span>
+            <input name="model" required placeholder="Qi10" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          </label>
+          <label class="block col-span-2 sm:col-span-1">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Category</span>
+            <select name="category" required class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Select…</option>
+              <option>Driver</option><option>Wood</option><option>Hybrid</option>
+              <option>Iron Set</option><option>Iron</option><option>Wedge</option><option>Putter</option>
+            </select>
+          </label>
+          <label data-field="number" class="block col-span-2 sm:col-span-1">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Club number</span>
+            <input name="number" required placeholder="7 wood" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          </label>
+          <label data-field="startNumber" class="block col-span-2 sm:col-span-1 hidden">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Starting club</span>
+            <select name="startNumber" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Select…</option>
+              <option>3 iron</option><option>4 iron</option><option>5 iron</option><option>6 iron</option>
+              <option>7 iron</option><option>8 iron</option><option>9 iron</option><option>Pitching wedge</option>
+            </select>
+          </label>
+          <label data-field="endNumber" class="block col-span-2 sm:col-span-1 hidden">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Ending club</span>
+            <select name="endNumber" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">Select…</option>
+              <option>3 iron</option><option>4 iron</option><option>5 iron</option><option>6 iron</option>
+              <option>7 iron</option><option>8 iron</option><option>9 iron</option><option>Pitching wedge</option>
+            </select>
+          </label>
+          <label data-field="loft" class="block">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Loft (°)</span>
+            <input name="loft" type="number" step="0.5" placeholder="21" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          </label>
+          <label data-field="length" class="block">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Length (in)</span>
+            <input name="length" type="number" step="0.25" placeholder="42" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          </label>
+          <label data-field="carry" class="block col-span-2">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Carry distance (yds)</span>
+            <input name="carry" type="number" step="1" placeholder="175" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          </label>
+        </div>
+        <div class="flex items-center justify-between pt-2 gap-2">
+          <button type="button" id="deleteBtn" class="hidden text-sm text-rose-600 hover:text-rose-700 font-medium">Delete</button>
+          <div class="flex items-center gap-2 ml-auto">
+            <button type="button" id="cancelBtn" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-2 rounded-lg">Cancel</button>
+            <button type="submit" class="text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg shadow-sm">Save club</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============== SAVE BAG MODAL ============== -->
+  <div id="saveBagModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md">
+      <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <h3 class="font-semibold">Save bag</h3>
+        <button id="saveBagModalClose" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+          <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+        </button>
+      </div>
+      <form id="saveBagForm" class="p-5 space-y-4">
+        <p id="saveBagSummary" class="text-sm text-slate-600 dark:text-slate-400"></p>
+
+        <div id="saveBagOverwriteWrap" class="hidden">
+          <label class="block">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Overwrite an existing bag</span>
+            <select id="saveBagExisting" name="existing" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">— Choose one —</option>
+            </select>
+          </label>
+          <div class="flex items-center my-3 text-xs uppercase tracking-wider text-slate-400">
+            <div class="flex-1 h-px bg-slate-200 dark:bg-slate-800"></div>
+            <span class="px-2">or</span>
+            <div class="flex-1 h-px bg-slate-200 dark:bg-slate-800"></div>
+          </div>
+        </div>
+
+        <label class="block">
+          <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Save as a new bag</span>
+          <input id="saveBagNewName" name="name" type="text" placeholder='e.g. "Main set", "Par 3 set"' class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+        </label>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" id="saveBagCancel" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-2 rounded-lg">Cancel</button>
+          <button type="submit" class="text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg shadow-sm">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============== APP LOGIC ============== -->
+  <script>
+  (function () {
+    'use strict';
+
+    const STORAGE_KEY = 'witb.v1';
+    const VIEW_KEY = 'witb.viewMode';
+    let viewMode = localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'card';
+    const CATEGORY_ORDER = ['Driver', 'Wood', 'Hybrid', 'Iron Set', 'Iron', 'Wedge', 'Putter'];
+    // Valid iron-set range numbers, in order. Used to compute set size.
+    const IRON_NUMBERS = ['3 iron', '4 iron', '5 iron', '6 iron', '7 iron', '8 iron', '9 iron', 'Pitching wedge'];
+    function ironIndex(n) { return IRON_NUMBERS.indexOf(n); }
+    function ironSetCount(start, end) {
+      const i = ironIndex(start), j = ironIndex(end);
+      if (i < 0 || j < 0) return 0;
+      return Math.abs(j - i) + 1;
+    }
+    function shortIronNumber(n) {
+      if (!n) return '';
+      if (n === 'Pitching wedge') return 'PW';
+      return n.replace(' iron', 'i'); // "5 iron" -> "5i"
+    }
+    // Display label for any club. Iron sets render as "5i–PW".
+    function clubLabel(c) {
+      if (c.category === 'Iron Set' && c.startNumber && c.endNumber) {
+        return `${shortIronNumber(c.startNumber)}–${shortIronNumber(c.endNumber)}`;
+      }
+      return c.number || c.category || 'Club';
+    }
+    // Number of physical clubs this inventory item represents (Iron Set spans many).
+    function clubsRepresented(c) {
+      if (!c) return 0;
+      if (c.category === 'Iron Set') return ironSetCount(c.startNumber, c.endNumber);
+      return 1;
+    }
+    // Total physical clubs for a list of inventory IDs (e.g. a bag or saved bag).
+    function physicalClubCount(ids) {
+      return (ids || []).reduce((n, id) => n + clubsRepresented(byId(id)), 0);
+    }
+
+    // ---------- State ----------
+    /** @type {{inventory: Array, bag: string[], savedBags: Array<{id:string,name:string,clubs:string[]}>}} */
+    let state = { inventory: [], bag: [], savedBags: [] };
+    const DEFAULT_STATE = { inventory: [], bag: [], savedBags: [] };
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) state = Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
+        if (!Array.isArray(state.savedBags)) state.savedBags = [];
+      } catch (e) { console.warn('Failed to load state', e); }
+    }
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+    function uid(prefix = 'c_') {
+      return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    // ---------- Helpers ----------
+    function byId(id) { return state.inventory.find(c => c.id === id); }
+    function inBag(id) { return state.bag.includes(id); }
+    function bagClubs() { return state.bag.map(byId).filter(Boolean); }
+
+    function categorySort(a, b) {
+      const ca = CATEGORY_ORDER.indexOf(a.category);
+      const cb = CATEGORY_ORDER.indexOf(b.category);
+      if (ca !== cb) return ca - cb;
+      // Within Iron Set: sort by starting club number.
+      if (a.category === 'Iron Set') {
+        return ironIndex(a.startNumber) - ironIndex(b.startNumber);
+      }
+      const la = parseFloat(a.loft); const lb = parseFloat(b.loft);
+      if (!isNaN(la) && !isNaN(lb)) return la - lb;
+      return (a.number || '').localeCompare(b.number || '');
+    }
+
+    // ---------- Rendering ----------
+    const $ = sel => document.querySelector(sel);
+    const inventoryList = $('#inventoryList');
+    const bagList = $('#bagList');
+    const bagEmpty = $('#bagEmpty');
+    const invEmpty = $('#invEmpty');
+    const bagCounter = $('#bagCounter');
+    const invCount = $('#invCount');
+    const savedBagsList = $('#savedBagsList');
+    const savedBagsWrap = $('#savedBagsWrap');
+
+    function clubBadgeColor(category) {
+      switch (category) {
+        case 'Driver':   return 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300';
+        case 'Wood':     return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+        case 'Hybrid':   return 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300';
+        case 'Iron Set': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300';
+        case 'Iron':     return 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300';
+        case 'Wedge':    return 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300';
+        case 'Putter':   return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
+        default:         return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+      }
+    }
+
+    function specLine(c) {
+      const parts = [];
+      if (c.category === 'Iron Set') {
+        const n = ironSetCount(c.startNumber, c.endNumber);
+        if (n > 0) parts.push(`${n} clubs`);
+        return parts.join(' · ');
+      }
+      if (c.loft)   parts.push(c.loft + '°');
+      if (c.length) parts.push(c.length + '"');
+      if (c.carry)  parts.push(c.carry + ' yd');
+      return parts.join(' · ');
+    }
+
+    function inventoryCard(c) {
+      const inB = inBag(c.id);
+      const badge = clubBadgeColor(c.category);
+      return `
+        <div class="club-card group relative rounded-xl border p-3 sm:p-4 hover:shadow-md transition cursor-pointer ${inB ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-700' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800'}"
+             draggable="${!inB}" data-id="${c.id}" data-action="edit" title="Click to edit">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 ${badge}">${escape(c.category || '—')}</span>
+                <span class="text-sm font-semibold truncate">${escape(clubLabel(c))}</span>
+              </div>
+              <div class="mt-0.5 text-sm text-slate-600 dark:text-slate-400 truncate">${escape(c.brand || '')} ${escape(c.model || '')}</div>
+              <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">${specLine(c) || '<span class="opacity-50">No specs</span>'}</div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button data-action="edit" data-id="${c.id}" title="Edit" draggable="false"
+                class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-9.9 9.9-3.182.354.354-3.182 9.9-9.9z"/></svg>
+                Edit
+              </button>
+              ${inB
+                ? `<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-800/60 dark:text-emerald-300"><svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>In bag</span>`
+                : `<button data-action="add" data-id="${c.id}" title="Add to bag"
+                    class="p-1.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50">
+                    <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+                  </button>`
+              }
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // Compact single-row renderer for the list view.
+    function inventoryRow(c) {
+      const inB = inBag(c.id);
+      const badge = clubBadgeColor(c.category);
+      return `
+        <div class="club-card group flex items-center gap-3 rounded-lg border px-3 py-2 hover:shadow-sm transition cursor-pointer ${inB ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-700' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800'}"
+             draggable="${!inB}" data-id="${c.id}" data-action="edit" title="Click to edit">
+          <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 shrink-0 ${badge}">${escape(c.category || '—')}</span>
+          <div class="min-w-0 flex-1 flex items-baseline gap-2 flex-wrap">
+            <span class="text-sm font-semibold truncate">${escape(clubLabel(c))}</span>
+            <span class="text-sm text-slate-600 dark:text-slate-400 truncate">${escape(c.brand || '')} ${escape(c.model || '')}</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">${specLine(c)}</span>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button data-action="edit" data-id="${c.id}" title="Edit" draggable="false"
+              class="p-1.5 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-9.9 9.9-3.182.354.354-3.182 9.9-9.9z"/></svg>
+            </button>
+            ${inB
+              ? `<span class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-800/60 dark:text-emerald-300"><svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>In bag</span>`
+              : `<button data-action="add" data-id="${c.id}" title="Add to bag"
+                  class="p-1.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50">
+                  <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
+                </button>`
+            }
+          </div>
+        </div>`;
+    }
+
+    function bagItem(c) {
+      const badge = clubBadgeColor(c.category);
+      return `
+        <div class="club-card group flex items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 hover:border-emerald-300 dark:hover:border-emerald-800 cursor-pointer transition"
+             draggable="true" data-id="${c.id}" data-from="bag" data-action="edit" title="Click to edit">
+          <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 ${badge}">${escape(c.category || '—')}</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-sm font-medium truncate">${escape(clubLabel(c))} <span class="text-slate-500 dark:text-slate-400 font-normal">· ${escape(c.brand || '')} ${escape(c.model || '')}</span></div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">${specLine(c) || '<span class="opacity-50">No specs</span>'}</div>
+          </div>
+          <button data-action="edit" data-id="${c.id}" title="Edit"
+            class="p-1.5 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-9.9 9.9-3.182.354.354-3.182 9.9-9.9z"/></svg>
+          </button>
+          <button data-action="remove" data-id="${c.id}" title="Remove from bag"
+            class="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30">
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+          </button>
+        </div>`;
+    }
+
+    function escape(s) {
+      return String(s ?? '').replace(/[&<>"']/g, ch => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      })[ch]);
+    }
+
+    function savedBagChip(b) {
+      const isActive = bagsEqual(b.clubs, state.bag);
+      const wrapClass = isActive
+        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 ring-1 ring-emerald-500/30'
+        : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900';
+      return `
+        <div class="inline-flex items-stretch rounded-full border ${wrapClass} overflow-hidden text-xs">
+          <button data-action="loadBag" data-id="${b.id}" title="Load this bag"
+            class="px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1.5">
+            <span class="font-medium">${escape(b.name)}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${physicalClubCount(b.clubs)}</span>
+          </button>
+          <button data-action="renameBag" data-id="${b.id}" title="Rename"
+            class="px-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border-l border-slate-200 dark:border-slate-800">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-9.9 9.9-3.182.354.354-3.182 9.9-9.9z"/></svg>
+          </button>
+          <button data-action="deleteBag" data-id="${b.id}" title="Delete"
+            class="px-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 border-l border-slate-200 dark:border-slate-800">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+          </button>
+        </div>`;
+    }
+
+    function render() {
+      // Saved bags strip
+      if (state.savedBags.length === 0) {
+        savedBagsWrap.classList.add('hidden');
+        savedBagsList.innerHTML = '';
+      } else {
+        savedBagsWrap.classList.remove('hidden');
+        savedBagsList.innerHTML = state.savedBags.map(savedBagChip).join('');
+      }
+
+      // Inventory
+      const search = $('#searchInput').value.trim().toLowerCase();
+      const cat = $('#categoryFilter').value;
+      const filtered = state.inventory
+        .filter(c => !cat || c.category === cat)
+        .filter(c => !search || [c.brand, c.model, c.number, c.category, c.startNumber, c.endNumber].some(v => (v || '').toLowerCase().includes(search)))
+        .sort(categorySort);
+
+      invCount.textContent = `(${state.inventory.length})`;
+      if (state.inventory.length === 0) {
+        inventoryList.innerHTML = '';
+        invEmpty.classList.remove('hidden');
+      } else {
+        invEmpty.classList.add('hidden');
+        // Switch container layout based on view mode.
+        if (viewMode === 'list') {
+          inventoryList.className = 'flex flex-col gap-1.5';
+          inventoryList.innerHTML = filtered.map(inventoryRow).join('') ||
+            `<div class="text-center text-sm text-slate-400 py-8">No matches.</div>`;
+        } else {
+          inventoryList.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
+          inventoryList.innerHTML = filtered.map(inventoryCard).join('') ||
+            `<div class="col-span-full text-center text-sm text-slate-400 py-8">No matches.</div>`;
+        }
+      }
+      updateViewToggleUI();
+
+      // Bag
+      const bag = bagClubs().sort(categorySort);
+      const totalClubs = physicalClubCount(state.bag);
+      bagCounter.textContent = `${totalClubs} / 14 in bag`;
+      bagCounter.className = `text-xs sm:text-sm font-medium px-2.5 py-1 rounded-full ${
+        totalClubs > 14
+          ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'
+          : totalClubs === 14
+            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+            : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'
+      }`;
+
+      if (bag.length === 0) {
+        bagEmpty.classList.remove('hidden');
+        bagList.innerHTML = '';
+      } else {
+        bagEmpty.classList.add('hidden');
+        // Group by category for the bag view
+        const groups = {};
+        bag.forEach(c => { (groups[c.category] = groups[c.category] || []).push(c); });
+        bagList.innerHTML = CATEGORY_ORDER
+          .filter(cat => groups[cat])
+          .map(cat => {
+            const physical = groups[cat].reduce((n, c) => n + clubsRepresented(c), 0);
+            return `
+            <div>
+              <div class="flex items-center gap-2 mb-1.5">
+                <h3 class="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400">${cat}</h3>
+                <div class="flex-1 h-px bg-slate-200 dark:bg-slate-800"></div>
+                <span class="text-[11px] text-slate-400">${physical}</span>
+              </div>
+              <div class="space-y-2">${groups[cat].map(bagItem).join('')}</div>
+            </div>
+          `;}).join('');
+      }
+    }
+
+    // ---------- Bag mutations ----------
+    function addToBag(id) {
+      if (!byId(id)) return;
+      if (state.bag.includes(id)) return;
+      state.bag.push(id);
+      save(); render();
+      const el = bagList.querySelector(`[data-id="${id}"]`);
+      if (el) {
+        el.classList.add('bag-item-flash');
+        el.addEventListener('animationend', () => el.classList.remove('bag-item-flash'), { once: true });
+      }
+    }
+    function removeFromBag(id) {
+      state.bag = state.bag.filter(x => x !== id);
+      save(); render();
+    }
+
+    // ---------- Saved bag mutations ----------
+    function bagsEqual(a, b) {
+      if (a.length !== b.length) return false;
+      const sa = [...a].sort(), sb = [...b].sort();
+      return sa.every((x, i) => x === sb[i]);
+    }
+    function findSavedBag(id) { return state.savedBags.find(b => b.id === id); }
+
+    // Opens the Save bag modal pre-populated with current saved bags.
+    function openSaveBagModal() {
+      if (state.bag.length === 0) {
+        alert('Add some clubs to the bag before saving.');
+        return;
+      }
+      const m = $('#saveBagModal');
+      const overwriteWrap = $('#saveBagOverwriteWrap');
+      const existingSelect = $('#saveBagExisting');
+      const newName = $('#saveBagNewName');
+      const summary = $('#saveBagSummary');
+
+      // Summary line
+      const totalClubs = physicalClubCount(state.bag);
+      summary.textContent = `Saving ${state.bag.length} item${state.bag.length === 1 ? '' : 's'} (${totalClubs} club${totalClubs === 1 ? '' : 's'}).`;
+
+      // Populate existing dropdown (or hide that section if none)
+      existingSelect.innerHTML = '<option value="">— Choose one —</option>' +
+        state.savedBags.map(b => `<option value="${escape(b.id)}">${escape(b.name)} (${physicalClubCount(b.clubs)} clubs)</option>`).join('');
+      if (state.savedBags.length === 0) {
+        overwriteWrap.classList.add('hidden');
+      } else {
+        overwriteWrap.classList.remove('hidden');
+      }
+      existingSelect.value = '';
+      newName.value = '';
+
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+      setTimeout(() => newName.focus(), 50);
+    }
+    function closeSaveBagModal() {
+      const m = $('#saveBagModal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function loadSavedBag(id) {
+      const b = findSavedBag(id);
+      if (!b) return;
+      // Drop any club ids that no longer exist in inventory
+      const valid = b.clubs.filter(cid => byId(cid));
+      const dropped = b.clubs.length - valid.length;
+      // If the current bag has changes that don't match any saved bag, confirm before overwriting
+      const currentMatchesAny = state.savedBags.some(s => bagsEqual(s.clubs, state.bag));
+      if (state.bag.length > 0 && !currentMatchesAny && !bagsEqual(b.clubs, state.bag)) {
+        if (!confirm(`Replace the current bag with "${b.name}"? Your current setup isn't saved.`)) return;
+      }
+      state.bag = valid;
+      save(); render();
+      if (dropped > 0) alert(`Loaded "${b.name}". ${dropped} club(s) were skipped because they're no longer in your inventory.`);
+    }
+
+    function renameSavedBag(id) {
+      const b = findSavedBag(id);
+      if (!b) return;
+      const name = (prompt('New name for this bag:', b.name) || '').trim();
+      if (!name || name === b.name) return;
+      if (state.savedBags.some(s => s.id !== id && s.name.toLowerCase() === name.toLowerCase())) {
+        alert(`A bag named "${name}" already exists.`);
+        return;
+      }
+      b.name = name;
+      save(); render();
+    }
+
+    function deleteSavedBag(id) {
+      const b = findSavedBag(id);
+      if (!b) return;
+      if (!confirm(`Delete saved bag "${b.name}"? Your inventory and current bag are not affected.`)) return;
+      state.savedBags = state.savedBags.filter(x => x.id !== id);
+      save(); render();
+    }
+
+    // ---------- Drag and Drop ----------
+    let dragId = null;
+    let justDragged = false; // suppress the card-level click that can follow a drag
+    document.addEventListener('dragstart', (e) => {
+      // Never start a drag when the gesture began on a button or interactive control —
+      // otherwise a small mouse twitch on a button cancels the click.
+      if (e.target.closest('button, a, input, select, textarea, label')) {
+        e.preventDefault();
+        return;
+      }
+      const card = e.target.closest('[draggable="true"]');
+      if (!card) return;
+      dragId = card.dataset.id;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragId);
+    });
+    document.addEventListener('dragend', (e) => {
+      const card = e.target.closest('[draggable="true"]');
+      if (card) card.classList.remove('dragging');
+      dragId = null;
+      justDragged = true;
+      setTimeout(() => { justDragged = false; }, 50);
+      document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
+
+    const dropZone = $('#bagDropZone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', (e) => { if (e.target === dropZone) dropZone.classList.remove('drag-over'); });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const id = e.dataTransfer.getData('text/plain') || dragId;
+      if (id) addToBag(id);
+    });
+
+    // Drop OUTSIDE the bag (i.e., on inventory) removes from bag
+    const inventorySection = inventoryList.parentElement;
+    inventorySection.addEventListener('dragover', (e) => {
+      // Only signal if dragging from bag
+      const card = document.querySelector('.dragging[data-from="bag"]');
+      if (card) { e.preventDefault(); inventoryList.classList.add('drag-over'); }
+    });
+    inventorySection.addEventListener('dragleave', (e) => {
+      if (!inventorySection.contains(e.relatedTarget)) inventoryList.classList.remove('drag-over');
+    });
+    inventorySection.addEventListener('drop', (e) => {
+      const id = e.dataTransfer.getData('text/plain') || dragId;
+      const fromBag = document.querySelector(`.dragging[data-from="bag"][data-id="${id}"]`);
+      inventoryList.classList.remove('drag-over');
+      if (id && (fromBag || inBag(id))) {
+        e.preventDefault();
+        removeFromBag(id);
+      }
+    });
+
+    // ---------- Click handlers (delegated) ----------
+    // Inner buttons fire reliably even right after a drag.
+    // A click on a card body (with data-action="edit") opens the modal —
+    // unless we just finished a drag, in which case suppress the synthetic click.
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (btn) {
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        if (action === 'add') addToBag(id);
+        else if (action === 'remove') removeFromBag(id);
+        else if (action === 'edit') openModal(byId(id));
+        else if (action === 'loadBag') loadSavedBag(id);
+        else if (action === 'renameBag') renameSavedBag(id);
+        else if (action === 'deleteBag') deleteSavedBag(id);
+        return;
+      }
+      if (justDragged) return;
+      const card = e.target.closest('[data-action="edit"]');
+      if (card) openModal(byId(card.dataset.id));
+    });
+
+    $('#clearBagBtn').addEventListener('click', () => {
+      if (state.bag.length === 0) return;
+      if (confirm('Empty the bag? Your inventory will not be affected.')) {
+        state.bag = []; save(); render();
+      }
+    });
+    // ---------- Save bag modal wiring ----------
+    $('#saveBagBtn').addEventListener('click', openSaveBagModal);
+    $('#saveBagModalClose').addEventListener('click', closeSaveBagModal);
+    $('#saveBagCancel').addEventListener('click', closeSaveBagModal);
+    $('#saveBagModal').addEventListener('click', (e) => {
+      if (e.target.id === 'saveBagModal') closeSaveBagModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      const m = $('#saveBagModal');
+      if (e.key === 'Escape' && !m.classList.contains('hidden')) closeSaveBagModal();
+    });
+
+    // Mutually exclusive inputs: typing a new name clears the overwrite select, and vice versa.
+    $('#saveBagNewName').addEventListener('input', () => {
+      if ($('#saveBagNewName').value.trim()) $('#saveBagExisting').value = '';
+    });
+    $('#saveBagExisting').addEventListener('change', () => {
+      if ($('#saveBagExisting').value) $('#saveBagNewName').value = '';
+    });
+
+    $('#saveBagForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const overwriteId = $('#saveBagExisting').value;
+      const newName = $('#saveBagNewName').value.trim();
+
+      if (overwriteId) {
+        const target = findSavedBag(overwriteId);
+        if (!target) { alert('That saved bag no longer exists.'); return; }
+        if (!confirm(`Overwrite "${target.name}" with the current bag?`)) return;
+        target.clubs = [...state.bag];
+        save(); render(); closeSaveBagModal();
+        return;
+      }
+
+      if (newName) {
+        const conflict = state.savedBags.find(b => b.name.toLowerCase() === newName.toLowerCase());
+        if (conflict) {
+          if (!confirm(`A bag named "${conflict.name}" already exists. Overwrite it?`)) return;
+          conflict.clubs = [...state.bag];
+        } else {
+          state.savedBags.push({ id: uid('b_'), name: newName, clubs: [...state.bag] });
+        }
+        save(); render(); closeSaveBagModal();
+        return;
+      }
+
+      alert('Pick an existing bag to overwrite, or enter a name for a new bag.');
+    });
+
+    $('#searchInput').addEventListener('input', render);
+    $('#categoryFilter').addEventListener('change', render);
+
+    // View toggle (card / list)
+    function updateViewToggleUI() {
+      document.querySelectorAll('[data-view-btn]').forEach((btn) => {
+        const active = btn.dataset.viewBtn === viewMode;
+        btn.classList.toggle('bg-slate-200', active);
+        btn.classList.toggle('dark:bg-slate-700', active);
+        btn.classList.toggle('text-slate-900', active);
+        btn.classList.toggle('dark:text-white', active);
+      });
+    }
+    document.querySelectorAll('[data-view-btn]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        viewMode = btn.dataset.viewBtn;
+        localStorage.setItem(VIEW_KEY, viewMode);
+        render();
+      });
+    });
+
+    // ---------- Modal (add/edit) ----------
+    const modal = $('#modal');
+    const form = $('#clubForm');
+    const modalTitle = $('#modalTitle');
+    const deleteBtn = $('#deleteBtn');
+
+    // Hide and disable irrelevant fields based on category.
+    // - Putter: no club number, loft, or carry distance.
+    // - Iron Set: no club number, loft, or carry distance — but ADD startNumber/endNumber.
+    // Disabled inputs are excluded from FormData on submit, so they save without those fields.
+    function applyCategoryMode() {
+      const cat = form.querySelector('[name="category"]').value;
+      const isPutter = (cat === 'Putter');
+      const isIronSet = (cat === 'Iron Set');
+
+      const setHidden = (name, hidden) => {
+        const label = form.querySelector(`label[data-field="${name}"]`);
+        const input = form.querySelector(`[name="${name}"]`);
+        if (label) label.classList.toggle('hidden', hidden);
+        if (input) input.disabled = hidden;
+      };
+
+      // Standard single-club fields hidden for Putter and Iron Set.
+      ['number', 'loft', 'carry'].forEach(n => setHidden(n, isPutter || isIronSet));
+      // Length is hidden only for Iron Set (Putter still has a length spec).
+      setHidden('length', isIronSet);
+      // Iron Set range fields are shown only for Iron Set.
+      ['startNumber', 'endNumber'].forEach(n => setHidden(n, !isIronSet));
+    }
+
+    function openModal(club) {
+      form.reset();
+      // Use querySelector by name to avoid HTMLFormControlsCollection collisions
+      // (e.g. form.elements.length is the number of controls, not our "length" input).
+      const field = (name) => form.querySelector(`[name="${name}"]`);
+      if (club) {
+        modalTitle.textContent = 'Edit club';
+        deleteBtn.classList.remove('hidden');
+        for (const k of ['id','brand','model','number','category','loft','length','carry','startNumber','endNumber']) {
+          const el = field(k);
+          if (el) el.value = club[k] ?? '';
+        }
+      } else {
+        modalTitle.textContent = 'Add club';
+        deleteBtn.classList.add('hidden');
+        field('id').value = '';
+      }
+      applyCategoryMode();
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      setTimeout(() => field('brand').focus(), 50);
+    }
+    function closeModal() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    $('#addClubBtn').addEventListener('click', () => openModal(null));
+    $('#modalClose').addEventListener('click', closeModal);
+    $('#cancelBtn').addEventListener('click', closeModal);
+    form.querySelector('[name="category"]').addEventListener('change', applyCategoryMode);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+      // Light normalization. Note: disabled inputs (e.g. Putter loft/carry) are
+      // omitted from FormData entirely, so guard against undefined here.
+      const num = (v) => (v === '' || v == null) ? '' : Number(v);
+      data.brand = data.brand?.trim();
+      data.model = data.model?.trim();
+      data.number = data.number?.trim();
+      data.loft = num(data.loft);
+      data.length = num(data.length);
+      data.carry = num(data.carry);
+      // Putters never have loft, carry distance, or a club number — normalize.
+      if (data.category === 'Putter') {
+        data.loft = '';
+        data.carry = '';
+        data.number = 'Putter';
+        data.startNumber = '';
+        data.endNumber = '';
+      }
+      // Iron Set: validate range, drop the irrelevant single-club fields.
+      if (data.category === 'Iron Set') {
+        if (!data.startNumber || !data.endNumber) {
+          alert('Please select both starting and ending club numbers.');
+          return;
+        }
+        const si = ironIndex(data.startNumber);
+        const ei = ironIndex(data.endNumber);
+        if (si > ei) {
+          alert(`Starting club (${data.startNumber}) must come before or equal to ending club (${data.endNumber}).`);
+          return;
+        }
+        data.loft = '';
+        data.carry = '';
+        data.number = '';
+        data.length = '';
+      } else if (data.category !== 'Putter') {
+        // Non-Iron-Set, non-Putter: no start/end fields apply.
+        data.startNumber = '';
+        data.endNumber = '';
+      }
+
+      if (data.id) {
+        const i = state.inventory.findIndex(c => c.id === data.id);
+        if (i >= 0) state.inventory[i] = { ...state.inventory[i], ...data };
+      } else {
+        data.id = uid();
+        state.inventory.push(data);
+      }
+      save(); render(); closeModal();
+    });
+
+    deleteBtn.addEventListener('click', () => {
+      const id = form.querySelector('[name="id"]').value;
+      if (!id) return;
+      if (!confirm('Delete this club from your inventory? It will also be removed from the bag.')) return;
+      state.inventory = state.inventory.filter(c => c.id !== id);
+      state.bag = state.bag.filter(x => x !== id);
+      save(); render(); closeModal();
+    });
+
+    // ---------- Theme ----------
+    $('#themeBtn').addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('witb.theme', isDark ? 'dark' : 'light');
+    });
+
+    // ---------- Boot ----------
+    load();
+    // Seed an example only on first run with empty state
+    if (state.inventory.length === 0 && !localStorage.getItem('witb.seeded')) {
+      state.inventory = [
+        { id: uid(), brand: 'TaylorMade', model: 'Qi10', number: 'Driver', category: 'Driver', loft: 9, length: 45.75, carry: 265 },
+        { id: uid(), brand: 'TaylorMade', model: 'Qi10', number: '7 wood', category: 'Wood', loft: 21, length: 42, carry: 215 },
+        { id: uid(), brand: 'Titleist', model: 'T200', category: 'Iron Set', startNumber: '5 iron', endNumber: 'Pitching wedge' },
+        { id: uid(), brand: 'Titleist', model: 'T200', number: '7 iron', category: 'Iron', loft: 32, length: 37, carry: 175 },
+        { id: uid(), brand: 'Vokey', model: 'SM10', number: '56°', category: 'Wedge', loft: 56, length: 35.25, carry: 95 },
+        { id: uid(), brand: 'Scotty Cameron', model: 'Newport 2', number: 'Putter', category: 'Putter', loft: 3.5, length: 34, carry: 0 }
+      ];
+      localStorage.setItem('witb.seeded', '1');
+      save();
+    }
+    render();
+  })();
+  </script>
+</body>
+</html>

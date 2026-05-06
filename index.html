@@ -795,6 +795,7 @@
       const cat = form.querySelector('[name="category"]').value;
       const isPutter = (cat === 'Putter');
       const isIronSet = (cat === 'Iron Set');
+      const isDriver = (cat === 'Driver');
 
       const setHidden = (name, hidden) => {
         const label = form.querySelector(`label[data-field="${name}"]`);
@@ -803,8 +804,10 @@
         if (input) input.disabled = hidden;
       };
 
-      // Standard single-club fields hidden for Putter and Iron Set.
-      ['number', 'loft', 'carry'].forEach(n => setHidden(n, isPutter || isIronSet));
+      // Club number hidden for Putter, Iron Set, and Driver (category is self-evident).
+      setHidden('number', isPutter || isIronSet || isDriver);
+      // Loft and carry hidden for Putter and Iron Set only.
+      ['loft', 'carry'].forEach(n => setHidden(n, isPutter || isIronSet));
       // Length is hidden only for Iron Set (Putter still has a length spec).
       setHidden('length', isIronSet);
       // Iron Set range fields are shown only for Iron Set.
@@ -856,6 +859,12 @@
       data.loft = num(data.loft);
       data.length = num(data.length);
       data.carry = num(data.carry);
+      // Driver has no meaningful club number — category is sufficient.
+      if (data.category === 'Driver') {
+        data.number = '';
+        data.startNumber = '';
+        data.endNumber = '';
+      }
       // Putters never have loft, carry distance, or a club number — normalize.
       if (data.category === 'Putter') {
         data.loft = '';

@@ -302,10 +302,16 @@
       if (a.category === 'Iron Set') {
         return ironIndex(a.startNumber) - ironIndex(b.startNumber);
       }
-      // Within all other categories: alphabetical by brand, then model.
-      const brandCmp = (a.brand || '').localeCompare(b.brand || '');
-      if (brandCmp !== 0) return brandCmp;
-      return (a.model || '').localeCompare(b.model || '');
+      // Driver and Putter: alphabetical by brand, then model.
+      if (a.category === 'Driver' || a.category === 'Putter') {
+        const brandCmp = (a.brand || '').localeCompare(b.brand || '');
+        if (brandCmp !== 0) return brandCmp;
+        return (a.model || '').localeCompare(b.model || '');
+      }
+      // Wood, Hybrid, Iron, Wedge: sort by loft, then by number.
+      const la = parseFloat(a.loft); const lb = parseFloat(b.loft);
+      if (!isNaN(la) && !isNaN(lb)) return la - lb;
+      return (a.number || '').localeCompare(b.number || '');
     }
 
     // ---------- Rendering ----------

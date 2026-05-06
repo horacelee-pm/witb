@@ -413,7 +413,7 @@
              draggable="true" data-id="${c.id}" data-from="bag" data-action="edit" title="Click to edit">
           <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 ${badge}">${escape(c.category || '—')}</span>
           <div class="min-w-0 flex-1">
-            <div class="text-sm font-medium truncate">${escape(clubLabel(c))} <span class="text-slate-500 dark:text-slate-400 font-normal">· ${escape(c.brand || '')} ${escape(c.model || '')}</span></div>
+            <div class="text-sm font-medium truncate">${c.category !== 'Driver' && c.category !== 'Putter' ? `${escape(clubLabel(c))} <span class="text-slate-500 dark:text-slate-400 font-normal">· ${escape(c.brand || '')} ${escape(c.model || '')}</span>` : `${escape(c.brand || '')} ${escape(c.model || '')}`}</div>
             <div class="text-xs text-slate-500 dark:text-slate-400">${specLine(c) || '<span class="opacity-50">No specs</span>'}</div>
           </div>
           <button data-action="edit" data-id="${c.id}" title="Edit"

@@ -302,9 +302,10 @@
       if (a.category === 'Iron Set') {
         return ironIndex(a.startNumber) - ironIndex(b.startNumber);
       }
-      const la = parseFloat(a.loft); const lb = parseFloat(b.loft);
-      if (!isNaN(la) && !isNaN(lb)) return la - lb;
-      return (a.number || '').localeCompare(b.number || '');
+      // Within all other categories: alphabetical by brand, then model.
+      const brandCmp = (a.brand || '').localeCompare(b.brand || '');
+      if (brandCmp !== 0) return brandCmp;
+      return (a.model || '').localeCompare(b.model || '');
     }
 
     // ---------- Rendering ----------

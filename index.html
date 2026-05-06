@@ -298,9 +298,15 @@
       const ca = CATEGORY_ORDER.indexOf(a.category);
       const cb = CATEGORY_ORDER.indexOf(b.category);
       if (ca !== cb) return ca - cb;
-      // Within Iron Set: sort by starting club number.
+      // Within Iron Set: sort by start number, then end number, then brand, then model.
       if (a.category === 'Iron Set') {
-        return ironIndex(a.startNumber) - ironIndex(b.startNumber);
+        const startCmp = ironIndex(a.startNumber) - ironIndex(b.startNumber);
+        if (startCmp !== 0) return startCmp;
+        const endCmp = ironIndex(a.endNumber) - ironIndex(b.endNumber);
+        if (endCmp !== 0) return endCmp;
+        const brandCmp = (a.brand || '').localeCompare(b.brand || '');
+        if (brandCmp !== 0) return brandCmp;
+        return (a.model || '').localeCompare(b.model || '');
       }
       // Driver and Putter: alphabetical by brand, then model.
       if (a.category === 'Driver' || a.category === 'Putter') {

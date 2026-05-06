@@ -352,7 +352,7 @@
             <div class="min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 ${badge}">${escape(c.category || '—')}</span>
-                <span class="text-sm font-semibold truncate">${escape(clubLabel(c))}</span>
+                ${c.category !== 'Driver' ? `<span class="text-sm font-semibold truncate">${escape(clubLabel(c))}</span>` : ''}
               </div>
               <div class="mt-0.5 text-sm text-slate-600 dark:text-slate-400 truncate">${escape(c.brand || '')} ${escape(c.model || '')}</div>
               <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">${specLine(c) || '<span class="opacity-50">No specs</span>'}</div>
@@ -384,7 +384,7 @@
              draggable="${!inB}" data-id="${c.id}" data-action="edit" title="Click to edit">
           <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 shrink-0 ${badge}">${escape(c.category || '—')}</span>
           <div class="min-w-0 flex-1 flex items-baseline gap-2 flex-wrap">
-            <span class="text-sm font-semibold truncate">${escape(clubLabel(c))}</span>
+            ${c.category !== 'Driver' ? `<span class="text-sm font-semibold truncate">${escape(clubLabel(c))}</span>` : ''}
             <span class="text-sm text-slate-600 dark:text-slate-400 truncate">${escape(c.brand || '')} ${escape(c.model || '')}</span>
             <span class="text-xs text-slate-500 dark:text-slate-400">${specLine(c)}</span>
           </div>

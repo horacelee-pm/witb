@@ -308,10 +308,12 @@
         if (brandCmp !== 0) return brandCmp;
         return (a.model || '').localeCompare(b.model || '');
       }
-      // Wood, Hybrid, Iron, Wedge: sort by loft, then by number.
-      const la = parseFloat(a.loft); const lb = parseFloat(b.loft);
-      if (!isNaN(la) && !isNaN(lb)) return la - lb;
-      return (a.number || '').localeCompare(b.number || '');
+      // Wood, Hybrid, Iron, Wedge: sort by club number (numeric), then brand, then model.
+      const numCmp = (a.number || '').localeCompare(b.number || '', undefined, { numeric: true });
+      if (numCmp !== 0) return numCmp;
+      const brandCmp = (a.brand || '').localeCompare(b.brand || '');
+      if (brandCmp !== 0) return brandCmp;
+      return (a.model || '').localeCompare(b.model || '');
     }
 
     // ---------- Rendering ----------

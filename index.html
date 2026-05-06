@@ -96,7 +96,7 @@
           <select id="categoryFilter" class="text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <option value="">All</option>
             <option>Driver</option><option>Wood</option><option>Hybrid</option>
-            <option>Iron Set</option><option>Iron</option><option>Wedge</option><option>Putter</option>
+            <option>Iron</option><option>Iron Set</option><option>Wedge</option><option>Putter</option>
           </select>
           <div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 overflow-hidden text-slate-500 dark:text-slate-400">
             <button data-view-btn="card" id="viewCardBtn" title="Card view" class="px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
@@ -142,7 +142,7 @@
             <select name="category" required class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <option value="">Select…</option>
               <option>Driver</option><option>Wood</option><option>Hybrid</option>
-              <option>Iron Set</option><option>Iron</option><option>Wedge</option><option>Putter</option>
+              <option>Iron</option><option>Iron Set</option><option>Wedge</option><option>Putter</option>
             </select>
           </label>
           <label data-field="number" class="block col-span-2 sm:col-span-1">
@@ -238,7 +238,7 @@
     const STORAGE_KEY = 'witb.v1';
     const VIEW_KEY = 'witb.viewMode';
     let viewMode = localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'card';
-    const CATEGORY_ORDER = ['Driver', 'Wood', 'Hybrid', 'Iron Set', 'Iron', 'Wedge', 'Putter'];
+    const CATEGORY_ORDER = ['Driver', 'Wood', 'Hybrid', 'Iron', 'Iron Set', 'Wedge', 'Putter'];
     // Valid iron-set range numbers, in order. Used to compute set size.
     const IRON_NUMBERS = ['3 iron', '4 iron', '5 iron', '6 iron', '7 iron', '8 iron', '9 iron', 'Pitching wedge'];
     function ironIndex(n) { return IRON_NUMBERS.indexOf(n); }

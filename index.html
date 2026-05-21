@@ -403,28 +403,44 @@
     }
 
     async function handlePostLoginMigration() {
-      // Only prompt once per user, only if local data exists
+      console.log('[migration] starting');
       const migratedKey = 'witb.migrated.' + currentUser.id;
-      if (localStorage.getItem(migratedKey)) return;
-      if (!localStateIsNonEmpty()) { localStorage.setItem(migratedKey, '1'); return; }
+      if (localStorage.getItem(migratedKey)) { console.log('[migration] already done, skipping'); return; }
+      if (!localStateIsNonEmpty()) { console.log('[migration] no local data'); localStorage.setItem(migratedKey, '1'); return; }
 
-      // Load cloud state to check if it's empty (first login)
+      console.log('[migration] local data found, checking cloud...');
       await cloudLoad();
       const cloudHasData = state.inventory.length > 0;
+      console.log('[migration] cloudHasData:', cloudHasData, 'local clubs:', loadLocalState().inventory.length);
       localStorage.setItem(migratedKey, '1');
 
       if (cloudHasData) {
-        // Cloud already has data — don't risk overwriting it
+        console.log('[migration] cloud has data, skipping');
         return;
       }
 
+      console.log('[migration] showing modal...');
       const localS = loadLocalState();
       const doMigrate = await new Promise(resolve => showMigrateModal(localS, resolve));
+      console.log('[migration] user chose:', doMigrate ? 'import' : 'skip');
       if (doMigrate) {
         state = localS;
         await cloudSave();
+        console.log('[migration] done — clubs saved to cloud');
       }
     }
+
+    // Manual migration escape hatch — call window._witbMigrate() from the browser console
+    window._witbMigrate = async function() {
+      if (!currentUser) { console.error('Not logged in'); return; }
+      const localS = loadLocalState();
+      if (!localS.inventory.length) { console.error('No local data found'); return; }
+      console.log('Migrating', localS.inventory.length, 'clubs to cloud...');
+      state = localS;
+      await cloudSave();
+      render();
+      console.log('Done! Your clubs are now saved to the cloud.');
+    };
 
     // ---------- Auth helpers ----------
     function showAuthOverlay()  { document.getElementById('authOverlay').classList.remove('hidden'); }

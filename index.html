@@ -480,8 +480,12 @@
       }
       setAuthBusy(false);
       if (result.error) { showAuthError('otp', result.error.message); return; }
+      // Log result so we can debug what Supabase is returning
+      console.log('verifyOtp result:', JSON.stringify(result.data));
       // Handle session directly from result in case onAuthStateChange doesn't fire
       const session = result.data?.session;
+      const user = result.data?.user;
+      console.log('session:', session, 'user:', user);
       if (session?.user) {
         currentUser = session.user;
         document.getElementById('userMenuEmail').textContent = currentUser.email;
@@ -489,6 +493,8 @@
         await cloudLoad();
         hideAuthOverlay();
         render();
+      } else if (user && !session) {
+        showAuthError('otp', 'Verification succeeded but no session was returned. Please try signing in again.');
       }
     });
 

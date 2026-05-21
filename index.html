@@ -480,7 +480,16 @@
       }
       setAuthBusy(false);
       if (result.error) { showAuthError('otp', result.error.message); return; }
-      // onAuthStateChange will fire and handle the rest
+      // Handle session directly from result in case onAuthStateChange doesn't fire
+      const session = result.data?.session;
+      if (session?.user) {
+        currentUser = session.user;
+        document.getElementById('userMenuEmail').textContent = currentUser.email;
+        await handlePostLoginMigration();
+        await cloudLoad();
+        hideAuthOverlay();
+        render();
+      }
     });
 
     document.getElementById('authOtp').addEventListener('keydown', e => {

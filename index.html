@@ -306,7 +306,7 @@
   </div>
 
   <!-- ============== SUPABASE SDK ============== -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 
   <!-- ============== APP LOGIC ============== -->
   <script>
@@ -321,6 +321,7 @@
     // ----------------------------------------------------------------
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    window._supabase = supabase; // temporary debug access
 
     const STORAGE_KEY  = 'witb.v1';
     const VIEW_KEY     = 'witb.viewMode';

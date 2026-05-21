@@ -31,6 +31,69 @@
 </head>
 <body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased">
 
+  <!-- ============== LOGIN OVERLAY ============== -->
+  <div id="authOverlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm">
+      <div class="px-6 pt-6 pb-4 text-center border-b border-slate-200 dark:border-slate-800">
+        <div class="h-12 w-12 rounded-xl bg-emerald-600 grid place-items-center text-white text-2xl shadow mx-auto mb-3">⛳</div>
+        <h2 class="text-xl font-semibold tracking-tight">What's in the Bag</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Sign in to manage your golf inventory</p>
+      </div>
+
+      <!-- Step 1: email entry -->
+      <div id="authStepEmail" class="p-6 space-y-4">
+        <label class="block">
+          <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Email address</span>
+          <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"
+            class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+        </label>
+        <button id="authSendBtn"
+          class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
+          Send code
+        </button>
+        <p id="authEmailError" class="text-xs text-rose-600 hidden"></p>
+      </div>
+
+      <!-- Step 2: OTP entry -->
+      <div id="authStepOtp" class="p-6 space-y-4 hidden">
+        <p class="text-sm text-slate-600 dark:text-slate-400">
+          We sent a 6-digit code to <strong id="authEmailSent" class="text-slate-900 dark:text-slate-100"></strong>.
+          Enter it below.
+        </p>
+        <label class="block">
+          <span class="text-xs font-medium text-slate-700 dark:text-slate-300">One-time code</span>
+          <input id="authOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456"
+            class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+        </label>
+        <button id="authVerifyBtn"
+          class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
+          Verify &amp; sign in
+        </button>
+        <p id="authOtpError" class="text-xs text-rose-600 hidden"></p>
+        <button id="authBackBtn" class="w-full text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+          ← Use a different email
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== MIGRATE MODAL ============== -->
+  <div id="migrateModal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm">
+      <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+        <h3 class="font-semibold">Import local data?</h3>
+      </div>
+      <div class="p-5 space-y-3">
+        <p class="text-sm text-slate-600 dark:text-slate-400" id="migrateDesc"></p>
+        <p class="text-sm text-slate-600 dark:text-slate-400">Would you like to import it into your cloud account?</p>
+        <div class="flex gap-2 pt-1">
+          <button id="migrateYes" class="flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 shadow-sm transition">Import</button>
+          <button id="migrateNo" class="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 text-sm font-medium px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition">Skip</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ============== HEADER ============== -->
   <header class="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
@@ -38,7 +101,7 @@
         <div class="h-9 w-9 rounded-lg bg-emerald-600 grid place-items-center text-white font-bold shadow-sm">⛳</div>
         <div>
           <h1 class="text-lg sm:text-xl font-semibold tracking-tight">What's in the Bag</h1>
-          <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Your golf inventory & current setup</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Your golf inventory &amp; current setup</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -49,8 +112,20 @@
           <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
           <span class="hidden sm:inline">Add club</span>
         </button>
+        <!-- User menu -->
+        <div class="relative" id="userMenuWrap">
+          <button id="userMenuBtn" title="Account" class="rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1.5">
+            <svg class="w-5 h-5 text-slate-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+          </button>
+          <div id="userMenu" class="hidden absolute right-0 mt-1 w-52 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-1 z-50">
+            <div id="userMenuEmail" class="px-3 py-2 text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800 truncate"></div>
+            <button id="signOutBtn" class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+              Sign out
+            </button>
+          </div>
+        </div>
         <button id="themeBtn" title="Toggle theme" class="rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-          <svg class="w-5 h-5 hidden dark:block" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.95 2.05a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-2.05 4.95a1 1 0 01-1.414 0l-.707-.707a1 1 0 111.414-1.414l.707.707a1 1 0 010 1.414zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-5.657-1.05a1 1 0 010-1.414l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414 0zM4 10a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1zm1.05-5.657a1 1 0 011.414 0l.707.707A1 1 0 015.757 6.464l-.707-.707a1 1 0 010-1.414zM10 6a4 4 0 100 8 4 4 0 000-8z"/></svg>
+          <svg class="w-5 h-5 hidden dark:block" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.95 2.05a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-2.05 4.95a1 1 0 01-1.414 0l-.707-.707a1 1 0 111.414-1.414l.707.707a1 1 0 010 1.414zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-5.657-1.05a1 1 0 010-1.414l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414 0zM4 10a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1zm1.05-5.657a1 1 0 011.414 0l.707.707A1 1 0 115.757 6.464l-.707-.707a1 1 0 010-1.414zM10 6a4 4 0 100 8 4 4 0 000-8z"/></svg>
           <svg class="w-5 h-5 dark:hidden" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
         </button>
       </div>
@@ -230,75 +305,241 @@
     </div>
   </div>
 
+  <!-- ============== SUPABASE SDK ============== -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
   <!-- ============== APP LOGIC ============== -->
   <script>
   (function () {
     'use strict';
 
-    const STORAGE_KEY = 'witb.v1';
-    const VIEW_KEY = 'witb.viewMode';
+    // ----------------------------------------------------------------
+    // CONFIGURATION — paste your Supabase project URL and anon key here
+    // ----------------------------------------------------------------
+    const SUPABASE_URL  = 'https://rschyoyytmxdbljtvcrz.supabase.co';
+    const SUPABASE_ANON = 'sb_publishable_g7s19eYZnRQpxuntzM00VA_Z4EuWzUq';
+    // ----------------------------------------------------------------
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    const STORAGE_KEY  = 'witb.v1';
+    const VIEW_KEY     = 'witb.viewMode';
     let viewMode = localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'card';
     const CATEGORY_ORDER = ['Driver', 'Wood', 'Hybrid', 'Iron', 'Iron Set', 'Wedge', 'Putter'];
-    // Valid iron-set range numbers, in order. Used to compute set size.
-    const IRON_NUMBERS = ['3 iron', '4 iron', '5 iron', '6 iron', '7 iron', '8 iron', '9 iron', 'Pitching wedge'];
-    function ironIndex(n) { return IRON_NUMBERS.indexOf(n); }
-    function ironSetCount(start, end) {
-      const i = ironIndex(start), j = ironIndex(end);
-      if (i < 0 || j < 0) return 0;
-      return Math.abs(j - i) + 1;
-    }
-    function shortIronNumber(n) {
-      if (!n) return '';
-      if (n === 'Pitching wedge') return 'PW';
-      return n.replace(' iron', 'i'); // "5 iron" -> "5i"
-    }
-    // Display label for any club. Iron sets render as "5i–PW".
-    function clubLabel(c) {
-      if (c.category === 'Iron Set' && c.startNumber && c.endNumber) {
-        return `${shortIronNumber(c.startNumber)}–${shortIronNumber(c.endNumber)}`;
-      }
-      return c.number || c.category || 'Club';
-    }
-    // Number of physical clubs this inventory item represents (Iron Set spans many).
-    function clubsRepresented(c) {
-      if (!c) return 0;
-      if (c.category === 'Iron Set') return ironSetCount(c.startNumber, c.endNumber);
-      return 1;
-    }
-    // Total physical clubs for a list of inventory IDs (e.g. a bag or saved bag).
-    function physicalClubCount(ids) {
-      return (ids || []).reduce((n, id) => n + clubsRepresented(byId(id)), 0);
-    }
+    const IRON_NUMBERS   = ['3 iron', '4 iron', '5 iron', '6 iron', '7 iron', '8 iron', '9 iron', 'Pitching wedge'];
+    function ironIndex(n)          { return IRON_NUMBERS.indexOf(n); }
+    function ironSetCount(s, e)    { const i = ironIndex(s), j = ironIndex(e); if (i < 0 || j < 0) return 0; return Math.abs(j - i) + 1; }
+    function shortIronNumber(n)    { if (!n) return ''; if (n === 'Pitching wedge') return 'PW'; return n.replace(' iron', 'i'); }
+    function clubLabel(c)          { if (c.category === 'Iron Set' && c.startNumber && c.endNumber) return `${shortIronNumber(c.startNumber)}–${shortIronNumber(c.endNumber)}`; return c.number || c.category || 'Club'; }
+    function clubsRepresented(c)   { if (!c) return 0; if (c.category === 'Iron Set') return ironSetCount(c.startNumber, c.endNumber); return 1; }
+    function physicalClubCount(ids){ return (ids || []).reduce((n, id) => n + clubsRepresented(byId(id)), 0); }
 
     // ---------- State ----------
-    /** @type {{inventory: Array, bag: string[], savedBags: Array<{id:string,name:string,clubs:string[]}>}} */
     let state = { inventory: [], bag: [], savedBags: [] };
     const DEFAULT_STATE = { inventory: [], bag: [], savedBags: [] };
+    let currentUser = null;
+    let saveTimer = null;
 
-    function load() {
+    // ---------- Cloud sync ----------
+    async function cloudLoad() {
+      if (!currentUser) return;
+      const { data, error } = await supabase
+        .from('witb_data')
+        .select('state')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      if (error) { console.warn('Cloud load error', error); return; }
+      if (data?.state) {
+        state = Object.assign({}, DEFAULT_STATE, data.state);
+        if (!Array.isArray(state.savedBags)) state.savedBags = [];
+      }
+    }
+
+    async function cloudSave() {
+      if (!currentUser) return;
+      const { error } = await supabase
+        .from('witb_data')
+        .upsert({ user_id: currentUser.id, state: state, updated_at: new Date().toISOString() });
+      if (error) console.warn('Cloud save error', error);
+    }
+
+    // Debounce cloud saves to avoid a round-trip on every keystroke
+    function save() {
+      // Write to localStorage as a local cache so the page feels instant
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(cloudSave, 600);
+    }
+
+    // ---------- Migration ----------
+    function localStateIsNonEmpty() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) state = Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
-        if (!Array.isArray(state.savedBags)) state.savedBags = [];
-      } catch (e) { console.warn('Failed to load state', e); }
-    }
-    function save() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }
-    function uid(prefix = 'c_') {
-      return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        if (!raw) return false;
+        const s = JSON.parse(raw);
+        return Array.isArray(s.inventory) && s.inventory.length > 0;
+      } catch { return false; }
     }
 
+    function loadLocalState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
+      } catch {}
+      return { ...DEFAULT_STATE };
+    }
+
+    function showMigrateModal(localS, resolve) {
+      const inv = localS.inventory.length;
+      const bags = (localS.savedBags || []).length;
+      const desc = document.getElementById('migrateDesc');
+      desc.textContent = `Your browser has ${inv} club${inv === 1 ? '' : 's'} in inventory` +
+        (bags > 0 ? ` and ${bags} saved bag${bags === 1 ? '' : 's'}` : '') + ' stored locally.';
+      const modal = document.getElementById('migrateModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.getElementById('migrateYes').onclick = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); resolve(true); };
+      document.getElementById('migrateNo').onclick  = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); resolve(false); };
+    }
+
+    async function handlePostLoginMigration() {
+      // Only prompt once per user, only if local data exists
+      const migratedKey = 'witb.migrated.' + currentUser.id;
+      if (localStorage.getItem(migratedKey)) return;
+      if (!localStateIsNonEmpty()) { localStorage.setItem(migratedKey, '1'); return; }
+
+      // Load cloud state to check if it's empty (first login)
+      await cloudLoad();
+      const cloudHasData = state.inventory.length > 0;
+      localStorage.setItem(migratedKey, '1');
+
+      if (cloudHasData) {
+        // Cloud already has data — don't risk overwriting it
+        return;
+      }
+
+      const localS = loadLocalState();
+      const doMigrate = await new Promise(resolve => showMigrateModal(localS, resolve));
+      if (doMigrate) {
+        state = localS;
+        await cloudSave();
+      }
+    }
+
+    // ---------- Auth helpers ----------
+    function showAuthOverlay()  { document.getElementById('authOverlay').classList.remove('hidden'); }
+    function hideAuthOverlay()  { document.getElementById('authOverlay').classList.add('hidden'); }
+    function setAuthBusy(busy)  {
+      document.getElementById('authSendBtn').disabled = busy;
+      document.getElementById('authVerifyBtn').disabled = busy;
+    }
+    function showAuthError(step, msg) {
+      const el = document.getElementById(step === 'email' ? 'authEmailError' : 'authOtpError');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function clearAuthErrors() {
+      document.getElementById('authEmailError').classList.add('hidden');
+      document.getElementById('authOtpError').classList.add('hidden');
+    }
+
+    // ---------- Auth flow ----------
+    let pendingEmail = '';
+
+    document.getElementById('authSendBtn').addEventListener('click', async () => {
+      clearAuthErrors();
+      const email = document.getElementById('authEmail').value.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showAuthError('email', 'Please enter a valid email address.');
+        return;
+      }
+      setAuthBusy(true);
+      const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: null } });
+      setAuthBusy(false);
+      if (error) { showAuthError('email', error.message); return; }
+      pendingEmail = email;
+      document.getElementById('authEmailSent').textContent = email;
+      document.getElementById('authStepEmail').classList.add('hidden');
+      document.getElementById('authStepOtp').classList.remove('hidden');
+      setTimeout(() => document.getElementById('authOtp').focus(), 50);
+    });
+
+    document.getElementById('authEmail').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('authSendBtn').click();
+    });
+
+    document.getElementById('authVerifyBtn').addEventListener('click', async () => {
+      clearAuthErrors();
+      const token = document.getElementById('authOtp').value.trim().replace(/\s/g, '');
+      if (token.length < 6) { showAuthError('otp', 'Please enter the 6-digit code.'); return; }
+      setAuthBusy(true);
+      // Try magiclink type first (matches our custom email template), fall back to email type
+      let result = await supabase.auth.verifyOtp({ email: pendingEmail, token, type: 'magiclink' });
+      if (result.error) {
+        result = await supabase.auth.verifyOtp({ email: pendingEmail, token, type: 'email' });
+      }
+      setAuthBusy(false);
+      if (result.error) { showAuthError('otp', result.error.message); return; }
+      // onAuthStateChange will fire and handle the rest
+    });
+
+    document.getElementById('authOtp').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('authVerifyBtn').click();
+    });
+
+    document.getElementById('authBackBtn').addEventListener('click', () => {
+      clearAuthErrors();
+      document.getElementById('authStepOtp').classList.add('hidden');
+      document.getElementById('authStepEmail').classList.remove('hidden');
+      document.getElementById('authOtp').value = '';
+      setTimeout(() => document.getElementById('authEmail').focus(), 50);
+    });
+
+    // ---------- Auth state listener ----------
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        currentUser = session.user;
+        document.getElementById('userMenuEmail').textContent = currentUser.email;
+        await handlePostLoginMigration();
+        await cloudLoad();
+        hideAuthOverlay();
+        render();
+      } else {
+        currentUser = null;
+        state = { ...DEFAULT_STATE };
+        // Reset OTP form
+        document.getElementById('authStepOtp').classList.add('hidden');
+        document.getElementById('authStepEmail').classList.remove('hidden');
+        document.getElementById('authEmail').value = '';
+        document.getElementById('authOtp').value = '';
+        clearAuthErrors();
+        showAuthOverlay();
+        render();
+      }
+    });
+
+    // ---------- User menu ----------
+    document.getElementById('userMenuBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('userMenu').classList.toggle('hidden');
+    });
+    document.addEventListener('click', () => document.getElementById('userMenu').classList.add('hidden'));
+
+    document.getElementById('signOutBtn').addEventListener('click', async () => {
+      document.getElementById('userMenu').classList.add('hidden');
+      await supabase.auth.signOut();
+    });
+
     // ---------- Helpers ----------
-    function byId(id) { return state.inventory.find(c => c.id === id); }
+    function uid(prefix = 'c_') { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+    function byId(id)  { return state.inventory.find(c => c.id === id); }
     function inBag(id) { return state.bag.includes(id); }
-    function bagClubs() { return state.bag.map(byId).filter(Boolean); }
+    function bagClubs(){ return state.bag.map(byId).filter(Boolean); }
 
     function categorySort(a, b) {
       const ca = CATEGORY_ORDER.indexOf(a.category);
       const cb = CATEGORY_ORDER.indexOf(b.category);
       if (ca !== cb) return ca - cb;
-      // Within Iron Set: sort by start number, then end number, then brand, then model.
       if (a.category === 'Iron Set') {
         const startCmp = ironIndex(a.startNumber) - ironIndex(b.startNumber);
         if (startCmp !== 0) return startCmp;
@@ -308,13 +549,11 @@
         if (brandCmp !== 0) return brandCmp;
         return (a.model || '').localeCompare(b.model || '');
       }
-      // Driver and Putter: alphabetical by brand, then model.
       if (a.category === 'Driver' || a.category === 'Putter') {
         const brandCmp = (a.brand || '').localeCompare(b.brand || '');
         if (brandCmp !== 0) return brandCmp;
         return (a.model || '').localeCompare(b.model || '');
       }
-      // Wood, Hybrid, Iron, Wedge: sort by club number (numeric), then brand, then model.
       const numCmp = (a.number || '').localeCompare(b.number || '', undefined, { numeric: true });
       if (numCmp !== 0) return numCmp;
       const brandCmp = (a.brand || '').localeCompare(b.brand || '');
@@ -324,14 +563,14 @@
 
     // ---------- Rendering ----------
     const $ = sel => document.querySelector(sel);
-    const inventoryList = $('#inventoryList');
-    const bagList = $('#bagList');
-    const bagEmpty = $('#bagEmpty');
-    const invEmpty = $('#invEmpty');
-    const bagCounter = $('#bagCounter');
-    const invCount = $('#invCount');
-    const savedBagsList = $('#savedBagsList');
-    const savedBagsWrap = $('#savedBagsWrap');
+    const inventoryList  = $('#inventoryList');
+    const bagList        = $('#bagList');
+    const bagEmpty       = $('#bagEmpty');
+    const invEmpty       = $('#invEmpty');
+    const bagCounter     = $('#bagCounter');
+    const invCount       = $('#invCount');
+    const savedBagsList  = $('#savedBagsList');
+    const savedBagsWrap  = $('#savedBagsWrap');
 
     function clubBadgeColor(category) {
       switch (category) {
@@ -392,7 +631,6 @@
         </div>`;
     }
 
-    // Compact single-row renderer for the list view.
     function inventoryRow(c) {
       const inB = inBag(c.id);
       const badge = clubBadgeColor(c.category);
@@ -472,7 +710,6 @@
     }
 
     function render() {
-      // Saved bags strip
       if (state.savedBags.length === 0) {
         savedBagsWrap.classList.add('hidden');
         savedBagsList.innerHTML = '';
@@ -481,7 +718,6 @@
         savedBagsList.innerHTML = state.savedBags.map(savedBagChip).join('');
       }
 
-      // Inventory
       const search = $('#searchInput').value.trim().toLowerCase();
       const cat = $('#categoryFilter').value;
       const filtered = state.inventory
@@ -495,7 +731,6 @@
         invEmpty.classList.remove('hidden');
       } else {
         invEmpty.classList.add('hidden');
-        // Switch container layout based on view mode.
         if (viewMode === 'list') {
           inventoryList.className = 'flex flex-col gap-1.5';
           inventoryList.innerHTML = filtered.map(inventoryRow).join('') ||
@@ -508,7 +743,6 @@
       }
       updateViewToggleUI();
 
-      // Bag
       const bag = bagClubs().sort(categorySort);
       const totalClubs = physicalClubCount(state.bag);
       bagCounter.textContent = `${totalClubs} / 14 in bag`;
@@ -525,7 +759,6 @@
         bagList.innerHTML = '';
       } else {
         bagEmpty.classList.add('hidden');
-        // Group by category for the bag view
         const groups = {};
         bag.forEach(c => { (groups[c.category] = groups[c.category] || []).push(c); });
         bagList.innerHTML = CATEGORY_ORDER
@@ -570,36 +803,23 @@
     }
     function findSavedBag(id) { return state.savedBags.find(b => b.id === id); }
 
-    // Opens the Save bag modal pre-populated with current saved bags.
     function openSaveBagModal() {
-      if (state.bag.length === 0) {
-        alert('Add some clubs to the bag before saving.');
-        return;
-      }
+      if (state.bag.length === 0) { alert('Add some clubs to the bag before saving.'); return; }
       const m = $('#saveBagModal');
-      const overwriteWrap = $('#saveBagOverwriteWrap');
-      const existingSelect = $('#saveBagExisting');
-      const newName = $('#saveBagNewName');
-      const summary = $('#saveBagSummary');
-
-      // Summary line
       const totalClubs = physicalClubCount(state.bag);
-      summary.textContent = `Saving ${state.bag.length} item${state.bag.length === 1 ? '' : 's'} (${totalClubs} club${totalClubs === 1 ? '' : 's'}).`;
-
-      // Populate existing dropdown (or hide that section if none)
-      existingSelect.innerHTML = '<option value="">— Choose one —</option>' +
+      $('#saveBagSummary').textContent = `Saving ${state.bag.length} item${state.bag.length === 1 ? '' : 's'} (${totalClubs} club${totalClubs === 1 ? '' : 's'}).`;
+      $('#saveBagExisting').innerHTML = '<option value="">— Choose one —</option>' +
         state.savedBags.map(b => `<option value="${escape(b.id)}">${escape(b.name)} (${physicalClubCount(b.clubs)} clubs)</option>`).join('');
       if (state.savedBags.length === 0) {
-        overwriteWrap.classList.add('hidden');
+        $('#saveBagOverwriteWrap').classList.add('hidden');
       } else {
-        overwriteWrap.classList.remove('hidden');
+        $('#saveBagOverwriteWrap').classList.remove('hidden');
       }
-      existingSelect.value = '';
-      newName.value = '';
-
+      $('#saveBagExisting').value = '';
+      $('#saveBagNewName').value = '';
       m.classList.remove('hidden');
       m.classList.add('flex');
-      setTimeout(() => newName.focus(), 50);
+      setTimeout(() => $('#saveBagNewName').focus(), 50);
     }
     function closeSaveBagModal() {
       const m = $('#saveBagModal');
@@ -610,10 +830,8 @@
     function loadSavedBag(id) {
       const b = findSavedBag(id);
       if (!b) return;
-      // Drop any club ids that no longer exist in inventory
       const valid = b.clubs.filter(cid => byId(cid));
       const dropped = b.clubs.length - valid.length;
-      // If the current bag has changes that don't match any saved bag, confirm before overwriting
       const currentMatchesAny = state.savedBags.some(s => bagsEqual(s.clubs, state.bag));
       if (state.bag.length > 0 && !currentMatchesAny && !bagsEqual(b.clubs, state.bag)) {
         if (!confirm(`Replace the current bag with "${b.name}"? Your current setup isn't saved.`)) return;
@@ -646,14 +864,9 @@
 
     // ---------- Drag and Drop ----------
     let dragId = null;
-    let justDragged = false; // suppress the card-level click that can follow a drag
+    let justDragged = false;
     document.addEventListener('dragstart', (e) => {
-      // Never start a drag when the gesture began on a button or interactive control —
-      // otherwise a small mouse twitch on a button cancels the click.
-      if (e.target.closest('button, a, input, select, textarea, label')) {
-        e.preventDefault();
-        return;
-      }
+      if (e.target.closest('button, a, input, select, textarea, label')) { e.preventDefault(); return; }
       const card = e.target.closest('[draggable="true"]');
       if (!card) return;
       dragId = card.dataset.id;
@@ -680,10 +893,8 @@
       if (id) addToBag(id);
     });
 
-    // Drop OUTSIDE the bag (i.e., on inventory) removes from bag
     const inventorySection = inventoryList.parentElement;
     inventorySection.addEventListener('dragover', (e) => {
-      // Only signal if dragging from bag
       const card = document.querySelector('.dragging[data-from="bag"]');
       if (card) { e.preventDefault(); inventoryList.classList.add('drag-over'); }
     });
@@ -694,25 +905,19 @@
       const id = e.dataTransfer.getData('text/plain') || dragId;
       const fromBag = document.querySelector(`.dragging[data-from="bag"][data-id="${id}"]`);
       inventoryList.classList.remove('drag-over');
-      if (id && (fromBag || inBag(id))) {
-        e.preventDefault();
-        removeFromBag(id);
-      }
+      if (id && (fromBag || inBag(id))) { e.preventDefault(); removeFromBag(id); }
     });
 
-    // ---------- Click handlers (delegated) ----------
-    // Inner buttons fire reliably even right after a drag.
-    // A click on a card body (with data-action="edit") opens the modal —
-    // unless we just finished a drag, in which case suppress the synthetic click.
+    // ---------- Click handlers ----------
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-action]');
       if (btn) {
         const id = btn.dataset.id;
         const action = btn.dataset.action;
-        if (action === 'add') addToBag(id);
-        else if (action === 'remove') removeFromBag(id);
-        else if (action === 'edit') openModal(byId(id));
-        else if (action === 'loadBag') loadSavedBag(id);
+        if (action === 'add')        addToBag(id);
+        else if (action === 'remove')    removeFromBag(id);
+        else if (action === 'edit')      openModal(byId(id));
+        else if (action === 'loadBag')   loadSavedBag(id);
         else if (action === 'renameBag') renameSavedBag(id);
         else if (action === 'deleteBag') deleteSavedBag(id);
         return;
@@ -724,23 +929,17 @@
 
     $('#clearBagBtn').addEventListener('click', () => {
       if (state.bag.length === 0) return;
-      if (confirm('Empty the bag? Your inventory will not be affected.')) {
-        state.bag = []; save(); render();
-      }
+      if (confirm('Empty the bag? Your inventory will not be affected.')) { state.bag = []; save(); render(); }
     });
-    // ---------- Save bag modal wiring ----------
     $('#saveBagBtn').addEventListener('click', openSaveBagModal);
     $('#saveBagModalClose').addEventListener('click', closeSaveBagModal);
     $('#saveBagCancel').addEventListener('click', closeSaveBagModal);
-    $('#saveBagModal').addEventListener('click', (e) => {
-      if (e.target.id === 'saveBagModal') closeSaveBagModal();
-    });
+    $('#saveBagModal').addEventListener('click', (e) => { if (e.target.id === 'saveBagModal') closeSaveBagModal(); });
     document.addEventListener('keydown', (e) => {
       const m = $('#saveBagModal');
       if (e.key === 'Escape' && !m.classList.contains('hidden')) closeSaveBagModal();
     });
 
-    // Mutually exclusive inputs: typing a new name clears the overwrite select, and vice versa.
     $('#saveBagNewName').addEventListener('input', () => {
       if ($('#saveBagNewName').value.trim()) $('#saveBagExisting').value = '';
     });
@@ -780,7 +979,7 @@
     $('#searchInput').addEventListener('input', render);
     $('#categoryFilter').addEventListener('change', render);
 
-    // View toggle (card / list)
+    // ---------- View toggle ----------
     function updateViewToggleUI() {
       document.querySelectorAll('[data-view-btn]').forEach((btn) => {
         const active = btn.dataset.viewBtn === viewMode;
@@ -800,41 +999,29 @@
 
     // ---------- Modal (add/edit) ----------
     const modal = $('#modal');
-    const form = $('#clubForm');
+    const form  = $('#clubForm');
     const modalTitle = $('#modalTitle');
-    const deleteBtn = $('#deleteBtn');
+    const deleteBtn  = $('#deleteBtn');
 
-    // Hide and disable irrelevant fields based on category.
-    // - Putter: no club number, loft, or carry distance.
-    // - Iron Set: no club number, loft, or carry distance — but ADD startNumber/endNumber.
-    // Disabled inputs are excluded from FormData on submit, so they save without those fields.
     function applyCategoryMode() {
       const cat = form.querySelector('[name="category"]').value;
-      const isPutter = (cat === 'Putter');
+      const isPutter  = (cat === 'Putter');
       const isIronSet = (cat === 'Iron Set');
-      const isDriver = (cat === 'Driver');
-
+      const isDriver  = (cat === 'Driver');
       const setHidden = (name, hidden) => {
         const label = form.querySelector(`label[data-field="${name}"]`);
         const input = form.querySelector(`[name="${name}"]`);
         if (label) label.classList.toggle('hidden', hidden);
         if (input) input.disabled = hidden;
       };
-
-      // Club number hidden for Putter, Iron Set, and Driver (category is self-evident).
       setHidden('number', isPutter || isIronSet || isDriver);
-      // Loft and carry hidden for Putter and Iron Set only.
       ['loft', 'carry'].forEach(n => setHidden(n, isPutter || isIronSet));
-      // Length is hidden only for Iron Set (Putter still has a length spec).
       setHidden('length', isIronSet);
-      // Iron Set range fields are shown only for Iron Set.
       ['startNumber', 'endNumber'].forEach(n => setHidden(n, !isIronSet));
     }
 
     function openModal(club) {
       form.reset();
-      // Use querySelector by name to avoid HTMLFormControlsCollection collisions
-      // (e.g. form.elements.length is the number of controls, not our "length" input).
       const field = (name) => form.querySelector(`[name="${name}"]`);
       if (club) {
         modalTitle.textContent = 'Edit club';
@@ -867,51 +1054,23 @@
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const data = Object.fromEntries(new FormData(form).entries());
-      // Light normalization. Note: disabled inputs (e.g. Putter loft/carry) are
-      // omitted from FormData entirely, so guard against undefined here.
       const num = (v) => (v === '' || v == null) ? '' : Number(v);
-      data.brand = data.brand?.trim();
-      data.model = data.model?.trim();
+      data.brand  = data.brand?.trim();
+      data.model  = data.model?.trim();
       data.number = data.number?.trim();
-      data.loft = num(data.loft);
+      data.loft   = num(data.loft);
       data.length = num(data.length);
-      data.carry = num(data.carry);
-      // Driver has no meaningful club number — category is sufficient.
-      if (data.category === 'Driver') {
-        data.number = '';
-        data.startNumber = '';
-        data.endNumber = '';
-      }
-      // Putters never have loft, carry distance, or a club number — normalize.
-      if (data.category === 'Putter') {
-        data.loft = '';
-        data.carry = '';
-        data.number = 'Putter';
-        data.startNumber = '';
-        data.endNumber = '';
-      }
-      // Iron Set: validate range, drop the irrelevant single-club fields.
+      data.carry  = num(data.carry);
+      if (data.category === 'Driver')  { data.number = ''; data.startNumber = ''; data.endNumber = ''; }
+      if (data.category === 'Putter')  { data.loft = ''; data.carry = ''; data.number = 'Putter'; data.startNumber = ''; data.endNumber = ''; }
       if (data.category === 'Iron Set') {
-        if (!data.startNumber || !data.endNumber) {
-          alert('Please select both starting and ending club numbers.');
-          return;
-        }
-        const si = ironIndex(data.startNumber);
-        const ei = ironIndex(data.endNumber);
-        if (si > ei) {
-          alert(`Starting club (${data.startNumber}) must come before or equal to ending club (${data.endNumber}).`);
-          return;
-        }
-        data.loft = '';
-        data.carry = '';
-        data.number = '';
-        data.length = '';
+        if (!data.startNumber || !data.endNumber) { alert('Please select both starting and ending club numbers.'); return; }
+        const si = ironIndex(data.startNumber), ei = ironIndex(data.endNumber);
+        if (si > ei) { alert(`Starting club (${data.startNumber}) must come before or equal to ending club (${data.endNumber}).`); return; }
+        data.loft = ''; data.carry = ''; data.number = ''; data.length = '';
       } else if (data.category !== 'Putter') {
-        // Non-Iron-Set, non-Putter: no start/end fields apply.
-        data.startNumber = '';
-        data.endNumber = '';
+        data.startNumber = ''; data.endNumber = '';
       }
-
       if (data.id) {
         const i = state.inventory.findIndex(c => c.id === data.id);
         if (i >= 0) state.inventory[i] = { ...state.inventory[i], ...data };
@@ -938,20 +1097,15 @@
     });
 
     // ---------- Boot ----------
-    load();
-    // Seed an example only on first run with empty state
-    if (state.inventory.length === 0 && !localStorage.getItem('witb.seeded')) {
-      state.inventory = [
-        { id: uid(), brand: 'TaylorMade', model: 'Qi10', number: 'Driver', category: 'Driver', loft: 9, length: 45.75, carry: 265 },
-        { id: uid(), brand: 'TaylorMade', model: 'Qi10', number: '7 wood', category: 'Wood', loft: 21, length: 42, carry: 215 },
-        { id: uid(), brand: 'Titleist', model: 'T200', category: 'Iron Set', startNumber: '5 iron', endNumber: 'Pitching wedge' },
-        { id: uid(), brand: 'Titleist', model: 'T200', number: '7 iron', category: 'Iron', loft: 32, length: 37, carry: 175 },
-        { id: uid(), brand: 'Vokey', model: 'SM10', number: '56°', category: 'Wedge', loft: 56, length: 35.25, carry: 95 },
-        { id: uid(), brand: 'Scotty Cameron', model: 'Newport 2', number: 'Putter', category: 'Putter', loft: 3.5, length: 34, carry: 0 }
-      ];
-      localStorage.setItem('witb.seeded', '1');
-      save();
-    }
+    // Restore session if one exists (handles page refresh while logged in)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        // Not logged in — show the overlay; onAuthStateChange will handle login
+        showAuthOverlay();
+      }
+      // If session exists, onAuthStateChange fires automatically and loads data
+    });
+
     render();
   })();
   </script>

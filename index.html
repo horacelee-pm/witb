@@ -499,9 +499,9 @@
         if (session?.user) {
           currentUser = session.user;
           document.getElementById('userMenuEmail').textContent = currentUser.email;
+          hideAuthOverlay(); // Hide first so migration modal isn't obscured
           await handlePostLoginMigration();
           await cloudLoad();
-          hideAuthOverlay();
           render();
         } else {
           showAuthError('otp', 'Could not establish a session. Please try again.');
@@ -530,9 +530,9 @@
       if (session?.user) {
         currentUser = session.user;
         document.getElementById('userMenuEmail').textContent = currentUser.email;
+        hideAuthOverlay(); // Hide first so migration modal isn't obscured
         await handlePostLoginMigration();
         await cloudLoad();
-        hideAuthOverlay();
         render();
       } else {
         currentUser = null;

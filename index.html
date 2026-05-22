@@ -321,7 +321,6 @@
     // ----------------------------------------------------------------
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    window._supabase = supabase; // temporary debug access
 
     const STORAGE_KEY  = 'witb.v1';
     const VIEW_KEY     = 'witb.viewMode';
@@ -404,30 +403,21 @@
     }
 
     async function handlePostLoginMigration() {
-      console.log('[migration] starting');
       const migratedKey = 'witb.migrated.' + currentUser.id;
-      if (localStorage.getItem(migratedKey)) { console.log('[migration] already done, skipping'); return; }
-      if (!localStateIsNonEmpty()) { console.log('[migration] no local data'); localStorage.setItem(migratedKey, '1'); return; }
+      if (localStorage.getItem(migratedKey)) return;
+      if (!localStateIsNonEmpty()) { localStorage.setItem(migratedKey, '1'); return; }
 
-      console.log('[migration] local data found, checking cloud...');
       await cloudLoad();
       const cloudHasData = state.inventory.length > 0;
-      console.log('[migration] cloudHasData:', cloudHasData, 'local clubs:', loadLocalState().inventory.length);
       localStorage.setItem(migratedKey, '1');
 
-      if (cloudHasData) {
-        console.log('[migration] cloud has data, skipping');
-        return;
-      }
+      if (cloudHasData) return;
 
-      console.log('[migration] showing modal...');
       const localS = loadLocalState();
       const doMigrate = await new Promise(resolve => showMigrateModal(localS, resolve));
-      console.log('[migration] user chose:', doMigrate ? 'import' : 'skip');
       if (doMigrate) {
         state = localS;
         await cloudSave();
-        console.log('[migration] done — clubs saved to cloud');
       }
     }
 
@@ -486,22 +476,16 @@
     });
 
     document.getElementById('authVerifyBtn').addEventListener('click', async () => {
-      console.log('Verify button clicked');
       try {
         clearAuthErrors();
         const token = document.getElementById('authOtp').value.trim().replace(/\s/g, '');
-        console.log('Token length:', token.length, 'pendingEmail:', pendingEmail);
         if (token.length < 6) { showAuthError('otp', 'Please enter the 6-digit code.'); return; }
         setAuthBusy(true);
         // Use type 'email' — avoids the internal redirect the SDK triggers for 'magiclink'
-        console.log('Calling verifyOtp with type: email');
         let result = await supabase.auth.verifyOtp({ email: pendingEmail, token, type: 'email' });
-        console.log('email result error:', result.error?.message);
         if (result.error) {
           // Fall back to magiclink type if email type rejected the token
-          console.log('Falling back to type: magiclink');
           result = await supabase.auth.verifyOtp({ email: pendingEmail, token, type: 'magiclink' });
-          console.log('magiclink result error:', result.error?.message);
         }
         setAuthBusy(false);
         if (result.error) { showAuthError('otp', result.error.message); return; }
@@ -511,12 +495,11 @@
         if (!session) {
           const { data } = await supabase.auth.getSession();
           session = data?.session;
-          console.log('fetched session from getSession:', !!session);
         }
         if (session?.user) {
           currentUser = session.user;
           document.getElementById('userMenuEmail').textContent = currentUser.email;
-          hideAuthOverlay(); // Hide first so migration modal isn't obscured
+          hideAuthOverlay();
           await handlePostLoginMigration();
           await cloudLoad();
           render();
@@ -524,7 +507,6 @@
           showAuthError('otp', 'Could not establish a session. Please try again.');
         }
       } catch (err) {
-        console.error('Verify error:', err);
         setAuthBusy(false);
         showAuthError('otp', 'An unexpected error occurred: ' + err.message);
       }

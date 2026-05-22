@@ -348,7 +348,19 @@
         .select('state')
         .eq('user_id', currentUser.id)
         .maybeSingle();
-      if (error) { console.warn('Cloud load error', error); return; }
+      if (error) {
+        console.warn('Cloud load error', error);
+        // Auth errors mean our stored token is bad — clear it locally so the user can re-login cleanly
+        const isAuthError = error.status === 401 || error.code === 'PGRST301' ||
+          (error.message || '').toLowerCase().includes('jwt') ||
+          (error.message || '').toLowerCase().includes('invalid') ||
+          (error.message || '').toLowerCase().includes('expired');
+        if (isAuthError) {
+          console.warn('Stale/invalid session detected — clearing local auth state');
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+        }
+        return;
+      }
       if (data?.state) {
         state = Object.assign({}, DEFAULT_STATE, data.state);
         if (!Array.isArray(state.savedBags)) state.savedBags = [];
@@ -534,6 +546,9 @@
         await cloudLoad();
         render();
       } else {
+        // Force-clear any stale Supabase tokens from localStorage so the login form
+        // works cleanly on the next attempt (avoids the "stuck after reload" bug).
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
         currentUser = null;
         state = { ...DEFAULT_STATE };
         // Reset OTP form
@@ -556,7 +571,13 @@
 
     document.getElementById('signOutBtn').addEventListener('click', async () => {
       document.getElementById('userMenu').classList.add('hidden');
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        // If the remote sign-out call fails (e.g. token already invalid), clear locally so the
+        // user isn't permanently stuck.
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
     });
 
     // ---------- Helpers ----------

@@ -348,19 +348,7 @@
         .select('state')
         .eq('user_id', currentUser.id)
         .maybeSingle();
-      if (error) {
-        console.warn('Cloud load error', error);
-        // Auth errors mean our stored token is bad — clear it locally so the user can re-login cleanly
-        const isAuthError = error.status === 401 || error.code === 'PGRST301' ||
-          (error.message || '').toLowerCase().includes('jwt') ||
-          (error.message || '').toLowerCase().includes('invalid') ||
-          (error.message || '').toLowerCase().includes('expired');
-        if (isAuthError) {
-          console.warn('Stale/invalid session detected — clearing local auth state');
-          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-        }
-        return;
-      }
+      if (error) { console.warn('Cloud load error', error); return; }
       if (data?.state) {
         state = Object.assign({}, DEFAULT_STATE, data.state);
         if (!Array.isArray(state.savedBags)) state.savedBags = [];
@@ -501,23 +489,7 @@
         }
         setAuthBusy(false);
         if (result.error) { showAuthError('otp', result.error.message); return; }
-
-        // Explicitly fetch the session — SDK stores it in localStorage even if result.data.session is empty
-        let session = result.data?.session;
-        if (!session) {
-          const { data } = await supabase.auth.getSession();
-          session = data?.session;
-        }
-        if (session?.user) {
-          currentUser = session.user;
-          document.getElementById('userMenuEmail').textContent = currentUser.email;
-          hideAuthOverlay();
-          await handlePostLoginMigration();
-          await cloudLoad();
-          render();
-        } else {
-          showAuthError('otp', 'Could not establish a session. Please try again.');
-        }
+        // Success — the SIGNED_IN event in onAuthStateChange handles data loading
       } catch (err) {
         setAuthBusy(false);
         showAuthError('otp', 'An unexpected error occurred: ' + err.message);
@@ -537,18 +509,21 @@
     });
 
     // ---------- Auth state listener ----------
+    // INITIAL_SESSION is intentionally ignored here — the boot sequence below uses
+    // getSession() which properly awaits any in-flight token refresh before loading data.
+    // Handling INITIAL_SESSION here would race against that refresh and load with a
+    // potentially expired token.
     supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
+      if (event === 'INITIAL_SESSION') return;
+
+      if (event === 'SIGNED_IN') {
         currentUser = session.user;
         document.getElementById('userMenuEmail').textContent = currentUser.email;
-        hideAuthOverlay(); // Hide first so migration modal isn't obscured
+        hideAuthOverlay();
         await handlePostLoginMigration();
         await cloudLoad();
         render();
-      } else {
-        // Force-clear any stale Supabase tokens from localStorage so the login form
-        // works cleanly on the next attempt (avoids the "stuck after reload" bug).
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      } else if (event === 'SIGNED_OUT') {
         currentUser = null;
         state = { ...DEFAULT_STATE };
         // Reset OTP form
@@ -560,6 +535,7 @@
         showAuthOverlay();
         render();
       }
+      // TOKEN_REFRESHED / USER_UPDATED: session is silently kept current by the SDK — no action needed
     });
 
     // ---------- User menu ----------
@@ -1147,16 +1123,22 @@
     });
 
     // ---------- Boot ----------
-    // Restore session if one exists (handles page refresh while logged in)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        // Not logged in — show the overlay; onAuthStateChange will handle login
-        showAuthOverlay();
+    // getSession() waits for any in-flight token refresh to complete before resolving,
+    // so we always get a valid (or definitively absent) session here. This is the safe
+    // place to do the initial data load on page reload — unlike onAuthStateChange's
+    // INITIAL_SESSION event which can fire before the refresh finishes.
+    render(); // Show empty UI immediately (auth overlay is visible by default in HTML)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        currentUser = session.user;
+        document.getElementById('userMenuEmail').textContent = currentUser.email;
+        hideAuthOverlay();
+        await handlePostLoginMigration();
+        await cloudLoad();
+        render();
       }
-      // If session exists, onAuthStateChange fires automatically and loads data
+      // No session — auth overlay stays visible for the user to log in
     });
-
-    render();
   })();
   </script>
 </body>

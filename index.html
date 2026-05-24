@@ -306,7 +306,7 @@
   </div>
 
   <!-- ============== SUPABASE SDK ============== -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
   <!-- ============== APP LOGIC ============== -->
   <script>
@@ -548,6 +548,8 @@
 
     // ---------- Auth state listener ----------
     supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[auth]', event, session ? 'session present' : 'no session');
+
       if (session?.user) {
         currentUser = session.user;
         document.getElementById('userMenuEmail').textContent = currentUser.email;
@@ -558,18 +560,24 @@
           await cloudLoad();
           render();
         } else if (event === 'TOKEN_REFRESHED') {
-          // The access token was refreshed — re-run cloudLoad in case the INITIAL_SESSION
-          // load failed with an expired token (e.g. on page reload after >1 hour).
+          // Access token was silently refreshed (e.g. page reload after >1 hour).
+          // Re-run cloudLoad now that we have a fresh JWT.
           await cloudLoad();
           render();
         }
       } else {
-        // SIGNED_OUT or INITIAL_SESSION with no session.
-        // Automatically clear any stale sb-* auth tokens so the login form always works
-        // cleanly — this is the same as the manual console fix, done automatically.
-        Object.keys(localStorage)
-          .filter(k => k.startsWith('sb-'))
-          .forEach(k => localStorage.removeItem(k));
+        // ONLY wipe sb-* tokens on an explicit SIGNED_OUT — i.e. the user pressed
+        // the sign-out button. Do NOT clear them on INITIAL_SESSION with no session:
+        // that case occurs when the access token has expired and the SDK is in the
+        // middle of refreshing it via the refresh token. Clearing the sb-* keys here
+        // destroys the refresh token before the SDK can use it, which is exactly what
+        // was causing the "refresh breaks on page reload" bug.
+        if (event === 'SIGNED_OUT') {
+          Object.keys(localStorage)
+            .filter(k => k.startsWith('sb-'))
+            .forEach(k => localStorage.removeItem(k));
+        }
+
         currentUser = null;
         state = { ...DEFAULT_STATE };
         document.getElementById('authStepOtp').classList.add('hidden');
@@ -1086,91 +1094,4 @@
       };
       setHidden('number', isPutter || isIronSet || isDriver);
       ['loft', 'carry'].forEach(n => setHidden(n, isPutter || isIronSet));
-      setHidden('length', isIronSet);
-      ['startNumber', 'endNumber'].forEach(n => setHidden(n, !isIronSet));
-    }
-
-    function openModal(club) {
-      form.reset();
-      const field = (name) => form.querySelector(`[name="${name}"]`);
-      if (club) {
-        modalTitle.textContent = 'Edit club';
-        deleteBtn.classList.remove('hidden');
-        for (const k of ['id','brand','model','number','category','loft','length','carry','startNumber','endNumber']) {
-          const el = field(k);
-          if (el) el.value = club[k] ?? '';
-        }
-      } else {
-        modalTitle.textContent = 'Add club';
-        deleteBtn.classList.add('hidden');
-        field('id').value = '';
-      }
-      applyCategoryMode();
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      setTimeout(() => field('brand').focus(), 50);
-    }
-    function closeModal() {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
-    $('#addClubBtn').addEventListener('click', () => openModal(null));
-    $('#modalClose').addEventListener('click', closeModal);
-    $('#cancelBtn').addEventListener('click', closeModal);
-    form.querySelector('[name="category"]').addEventListener('change', applyCategoryMode);
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(form).entries());
-      const num = (v) => (v === '' || v == null) ? '' : Number(v);
-      data.brand  = data.brand?.trim();
-      data.model  = data.model?.trim();
-      data.number = data.number?.trim();
-      data.loft   = num(data.loft);
-      data.length = num(data.length);
-      data.carry  = num(data.carry);
-      if (data.category === 'Driver')  { data.number = ''; data.startNumber = ''; data.endNumber = ''; }
-      if (data.category === 'Putter')  { data.loft = ''; data.carry = ''; data.number = 'Putter'; data.startNumber = ''; data.endNumber = ''; }
-      if (data.category === 'Iron Set') {
-        if (!data.startNumber || !data.endNumber) { alert('Please select both starting and ending club numbers.'); return; }
-        const si = ironIndex(data.startNumber), ei = ironIndex(data.endNumber);
-        if (si > ei) { alert(`Starting club (${data.startNumber}) must come before or equal to ending club (${data.endNumber}).`); return; }
-        data.loft = ''; data.carry = ''; data.number = ''; data.length = '';
-      } else if (data.category !== 'Putter') {
-        data.startNumber = ''; data.endNumber = '';
-      }
-      if (data.id) {
-        const i = state.inventory.findIndex(c => c.id === data.id);
-        if (i >= 0) state.inventory[i] = { ...state.inventory[i], ...data };
-      } else {
-        data.id = uid();
-        state.inventory.push(data);
-      }
-      save(); render(); closeModal();
-    });
-
-    deleteBtn.addEventListener('click', () => {
-      const id = form.querySelector('[name="id"]').value;
-      if (!id) return;
-      if (!confirm('Delete this club from your inventory? It will also be removed from the bag.')) return;
-      state.inventory = state.inventory.filter(c => c.id !== id);
-      state.bag = state.bag.filter(x => x !== id);
-      save(); render(); closeModal();
-    });
-
-    // ---------- Theme ----------
-    $('#themeBtn').addEventListener('click', () => {
-      const isDark = document.documentElement.classList.toggle('dark');
-      localStorage.setItem('witb.theme', isDark ? 'dark' : 'light');
-    });
-
-    // ---------- Boot ----------
-    // onAuthStateChange fires INITIAL_SESSION on page load, which handles restoring the
-    // session and loading data. No separate boot logic needed.
-    render();
-  })();
-  </script>
-</body>
-</html>
+      setHidden('length', isIron

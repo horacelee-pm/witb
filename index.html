@@ -343,23 +343,32 @@
     // ---------- Cloud sync ----------
     async function cloudLoad() {
       if (!currentUser) return;
+      // Use .limit(1) + array result instead of .maybeSingle() — maybeSingle() throws an error
+      // if duplicate rows exist (which can happen if onConflict wasn't set on earlier saves).
       const { data, error } = await supabase
         .from('witb_data')
         .select('state')
         .eq('user_id', currentUser.id)
-        .maybeSingle();
+        .order('updated_at', { ascending: false })
+        .limit(1);
       if (error) { console.warn('Cloud load error', error); return; }
-      if (data?.state) {
-        state = Object.assign({}, DEFAULT_STATE, data.state);
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row?.state) {
+        state = Object.assign({}, DEFAULT_STATE, row.state);
         if (!Array.isArray(state.savedBags)) state.savedBags = [];
       }
     }
 
     async function cloudSave() {
       if (!currentUser) return;
+      // onConflict: 'user_id' ensures this always updates the existing row rather than
+      // inserting a new one — without it every save creates a duplicate row.
       const { error } = await supabase
         .from('witb_data')
-        .upsert({ user_id: currentUser.id, state: state, updated_at: new Date().toISOString() });
+        .upsert(
+          { user_id: currentUser.id, state: state, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        );
       if (error) console.warn('Cloud save error', error);
     }
 
@@ -1123,21 +1132,28 @@
     });
 
     // ---------- Boot ----------
-    // getSession() waits for any in-flight token refresh to complete before resolving,
-    // so we always get a valid (or definitively absent) session here. This is the safe
-    // place to do the initial data load on page reload — unlike onAuthStateChange's
-    // INITIAL_SESSION event which can fire before the refresh finishes.
+    // getUser() makes a live server-side request to validate the token (and auto-refreshes
+    // it if expired), so we always get a definitively valid or definitively absent session.
+    // getSession() only reads localStorage and can return stale/expired tokens — that was
+    // the root cause of the "data gone after reload" bug.
     render(); // Show empty UI immediately (auth overlay is visible by default in HTML)
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        currentUser = session.user;
+    supabase.auth.getUser().then(async ({ data: { user }, error }) => {
+      if (user && !error) {
+        currentUser = user;
         document.getElementById('userMenuEmail').textContent = currentUser.email;
         hideAuthOverlay();
         await handlePostLoginMigration();
         await cloudLoad();
         render();
+      } else if (error) {
+        // Session is invalid or expired and couldn't be refreshed — clear stale tokens
+        // so the login form works cleanly (same as the user's manual sb-* key clear).
+        console.warn('Boot session check failed, clearing stale auth state:', error.message);
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('sb-'))
+          .forEach(k => localStorage.removeItem(k));
+        // Auth overlay is already visible
       }
-      // No session — auth overlay stays visible for the user to log in
     });
   })();
   </script>

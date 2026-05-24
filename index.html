@@ -343,19 +343,29 @@
     // ---------- Cloud sync ----------
     async function cloudLoad() {
       if (!currentUser) return;
-      // .limit(1) without .maybeSingle() — avoids a silent error when duplicate rows exist.
-      // No .order() — avoids failures if the column name differs from the table schema.
+      const uid = currentUser.id;
+      console.log('[cloudLoad] uid=' + uid.slice(0, 8));
+
       const { data, error } = await supabase
         .from('witb_data')
         .select('state')
-        .eq('user_id', currentUser.id)
+        .eq('user_id', uid)
         .limit(1);
-      if (error) { console.warn('Cloud load error', error); return; }
+
+      console.log('[cloudLoad] rows=' + (data ? data.length : 'null') + ' error=' + (error ? error.message : 'none'));
+
+      if (error) {
+        console.warn('[cloudLoad] error', error.code, error.message);
+        return;
+      }
+
       const row = Array.isArray(data) ? data[0] : data;
       if (row?.state) {
         state = Object.assign({}, DEFAULT_STATE, row.state);
         if (!Array.isArray(state.savedBags)) state.savedBags = [];
+        console.log('[cloudLoad] loaded ' + state.inventory.length + ' clubs from cloud');
       } else {
+        console.log('[cloudLoad] no cloud row — checking localStorage cache');
         // DB row doesn't exist yet (previous cloudSave may have failed silently).
         // Recover from the localStorage write-through cache and re-push to the cloud.
         try {
@@ -367,7 +377,7 @@
               cloudSave(); // fire-and-forget: creates the missing DB row
             }
           }
-        } catch (e) { console.warn('localStorage recovery error', e); }
+        } catch (e) { console.warn('[cloudLoad] localStorage recovery error', e); }
       }
     }
 
@@ -553,7 +563,7 @@
 
     // ---------- Auth state listener ----------
     supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[auth]', event, session ? 'session present' : 'no session');
+      console.log('[auth]', event, session ? ('user=' + session.user.id.slice(0,8)) : 'no session');
 
       if (session?.user) {
         currentUser = session.user;
@@ -564,19 +574,26 @@
           await handlePostLoginMigration();
           await cloudLoad();
           render();
+          // Safety net: if cloudLoad returned 0 clubs but we're authenticated,
+          // the JWT may not have been fully applied to the first request yet.
+          // Retry once after a short delay.
+          if (state.inventory.length === 0) {
+            setTimeout(async () => {
+              if (!currentUser) return;
+              console.log('[auth] retry cloudLoad after delay (got 0 clubs initially)');
+              await cloudLoad();
+              render();
+            }, 1500);
+          }
         } else if (event === 'TOKEN_REFRESHED') {
-          // Access token was silently refreshed (e.g. page reload after >1 hour).
-          // Re-run cloudLoad now that we have a fresh JWT.
-          await cloudLoad();
-          render();
+          // Token silently refreshed — just keep currentUser up to date.
+          // Data is already loaded; no need to re-query.
+          currentUser = session.user;
         }
       } else {
-        // ONLY wipe sb-* tokens on an explicit SIGNED_OUT — i.e. the user pressed
-        // the sign-out button. Do NOT clear them on INITIAL_SESSION with no session:
-        // that case occurs when the access token has expired and the SDK is in the
-        // middle of refreshing it via the refresh token. Clearing the sb-* keys here
-        // destroys the refresh token before the SDK can use it, which is exactly what
-        // was causing the "refresh breaks on page reload" bug.
+        // ONLY wipe sb-* tokens on an explicit SIGNED_OUT (user pressed sign-out).
+        // Do NOT clear them on INITIAL_SESSION with no session — that fires while
+        // the SDK is mid-refresh and clearing here destroys the refresh token.
         if (event === 'SIGNED_OUT') {
           Object.keys(localStorage)
             .filter(k => k.startsWith('sb-'))
@@ -604,12 +621,14 @@
 
     document.getElementById('signOutBtn').addEventListener('click', async () => {
       document.getElementById('userMenu').classList.add('hidden');
-      try {
-        await supabase.auth.signOut();
-      } catch (e) {
-        // If the remote sign-out call fails (e.g. token already invalid), clear locally so the
-        // user isn't permanently stuck.
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      // Supabase v2 returns { error } on failure — it does NOT throw. A try/catch is
+      // a no-op here. We must check the returned error explicitly.
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.warn('[signOut] remote signOut failed, signing out locally:', error.message);
+        // Token already invalid (e.g. expired, rotated). Clear locally so the user
+        // is never permanently stuck on a broken session.
+        await supabase.auth.signOut({ scope: 'local' });
       }
     });
 

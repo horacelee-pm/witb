@@ -571,20 +571,19 @@
         hideAuthOverlay();
 
         if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-          await handlePostLoginMigration();
-          await cloudLoad();
-          render();
-          // Safety net: if cloudLoad returned 0 clubs but we're authenticated,
-          // the JWT may not have been fully applied to the first request yet.
-          // Retry once after a short delay.
-          if (state.inventory.length === 0) {
-            setTimeout(async () => {
-              if (!currentUser) return;
-              console.log('[auth] retry cloudLoad after delay (got 0 clubs initially)');
-              await cloudLoad();
-              render();
-            }, 1500);
-          }
+          // IMPORTANT: do NOT await Supabase DB calls directly inside an
+          // onAuthStateChange callback. The SDK holds an internal auth lock
+          // while notifying subscribers; any DB query that needs to attach a
+          // JWT will try to acquire the same lock → deadlock → query hangs
+          // forever. Deferring with setTimeout(0) lets the callback return
+          // first, the lock is released, and then the query runs cleanly.
+          setTimeout(async () => {
+            if (!currentUser) return;
+            console.log('[auth deferred] starting migration + cloudLoad');
+            await handlePostLoginMigration();
+            await cloudLoad();
+            render();
+          }, 0);
         } else if (event === 'TOKEN_REFRESHED') {
           // Token silently refreshed — just keep currentUser up to date.
           // Data is already loaded; no need to re-query.

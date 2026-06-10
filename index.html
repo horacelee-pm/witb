@@ -31,69 +31,6 @@
 </head>
 <body class="h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased">
 
-  <!-- ============== LOGIN OVERLAY ============== -->
-  <div id="authOverlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm">
-      <div class="px-6 pt-6 pb-4 text-center border-b border-slate-200 dark:border-slate-800">
-        <div class="h-12 w-12 rounded-xl bg-emerald-600 grid place-items-center text-white text-2xl shadow mx-auto mb-3">⛳</div>
-        <h2 class="text-xl font-semibold tracking-tight">What's in the Bag</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Sign in to manage your golf inventory</p>
-      </div>
-
-      <!-- Step 1: email entry -->
-      <div id="authStepEmail" class="p-6 space-y-4">
-        <label class="block">
-          <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Email address</span>
-          <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"
-            class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
-        </label>
-        <button id="authSendBtn"
-          class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
-          Send code
-        </button>
-        <p id="authEmailError" class="text-xs text-rose-600 hidden"></p>
-      </div>
-
-      <!-- Step 2: OTP entry -->
-      <div id="authStepOtp" class="p-6 space-y-4 hidden">
-        <p class="text-sm text-slate-600 dark:text-slate-400">
-          We sent a 6-digit code to <strong id="authEmailSent" class="text-slate-900 dark:text-slate-100"></strong>.
-          Enter it below.
-        </p>
-        <label class="block">
-          <span class="text-xs font-medium text-slate-700 dark:text-slate-300">One-time code</span>
-          <input id="authOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456"
-            class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
-        </label>
-        <button id="authVerifyBtn"
-          class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed">
-          Verify &amp; sign in
-        </button>
-        <p id="authOtpError" class="text-xs text-rose-600 hidden"></p>
-        <button id="authBackBtn" class="w-full text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-          ← Use a different email
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============== MIGRATE MODAL ============== -->
-  <div id="migrateModal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm">
-      <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800">
-        <h3 class="font-semibold">Import local data?</h3>
-      </div>
-      <div class="p-5 space-y-3">
-        <p class="text-sm text-slate-600 dark:text-slate-400" id="migrateDesc"></p>
-        <p class="text-sm text-slate-600 dark:text-slate-400">Would you like to import it into your cloud account?</p>
-        <div class="flex gap-2 pt-1">
-          <button id="migrateYes" class="flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 shadow-sm transition">Import</button>
-          <button id="migrateNo" class="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 text-sm font-medium px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition">Skip</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ============== HEADER ============== -->
   <header class="sticky top-0 z-30 border-b border-emerald-900 dark:border-emerald-950 bg-emerald-800 dark:bg-emerald-950">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
@@ -112,18 +49,6 @@
           <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/></svg>
           <span class="hidden sm:inline">Add club</span>
         </button>
-        <!-- User menu -->
-        <div class="relative" id="userMenuWrap">
-          <button id="userMenuBtn" title="Account" class="rounded-lg p-1.5 hover:bg-emerald-700 dark:hover:bg-emerald-900 transition flex items-center gap-1.5">
-            <svg class="w-5 h-5 text-emerald-200" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-          </button>
-          <div id="userMenu" class="hidden absolute right-0 mt-1 w-52 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-1 z-50">
-            <div id="userMenuEmail" class="px-3 py-2 text-xs text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800 truncate"></div>
-            <button id="signOutBtn" class="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
-              Sign out
-            </button>
-          </div>
-        </div>
         <button id="themeBtn" title="Toggle theme" class="rounded-lg p-1.5 hover:bg-emerald-700 dark:hover:bg-emerald-900 transition text-emerald-200">
           <svg class="w-5 h-5 hidden dark:block" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.95 2.05a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-2.05 4.95a1 1 0 01-1.414 0l-.707-.707a1 1 0 111.414-1.414l.707.707a1 1 0 010 1.414zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-5.657-1.05a1 1 0 010-1.414l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414 0zM4 10a1 1 0 01-1 1H2a1 1 0 110-2h1a1 1 0 011 1zm1.05-5.657a1 1 0 011.414 0l.707.707A1 1 0 115.757 6.464l-.707-.707a1 1 0 010-1.414zM10 6a4 4 0 100 8 4 4 0 000-8z"/></svg>
           <svg class="w-5 h-5 dark:hidden" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
@@ -305,22 +230,10 @@
     </div>
   </div>
 
-  <!-- ============== SUPABASE SDK ============== -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
   <!-- ============== APP LOGIC ============== -->
   <script>
   (function () {
     'use strict';
-
-    // ----------------------------------------------------------------
-    // CONFIGURATION — paste your Supabase project URL and anon key here
-    // ----------------------------------------------------------------
-    const SUPABASE_URL  = 'https://rschyoyytmxdbljtvcrz.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzY2h5b3l5dG14ZGJsanR2Y3J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMjUyODIsImV4cCI6MjA5NDkwMTI4Mn0.P_KXdKK5nuZGA-gZTL0WIB9Ge8CD6edKUG4u8sajOFw';
-    // ----------------------------------------------------------------
-
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     const STORAGE_KEY  = 'witb.v1';
     const VIEW_KEY     = 'witb.viewMode';
@@ -337,299 +250,19 @@
     // ---------- State ----------
     let state = { inventory: [], bag: [], savedBags: [] };
     const DEFAULT_STATE = { inventory: [], bag: [], savedBags: [] };
-    let currentUser = null;
-    let saveTimer = null;
 
-    // ---------- Cloud sync ----------
-    async function cloudLoad() {
-      if (!currentUser) return;
-      const uid = currentUser.id;
-      console.log('[cloudLoad] uid=' + uid.slice(0, 8));
-
-      const { data, error } = await supabase
-        .from('witb_data')
-        .select('state')
-        .eq('user_id', uid)
-        .limit(1);
-
-      console.log('[cloudLoad] rows=' + (data ? data.length : 'null') + ' error=' + (error ? error.message : 'none'));
-
-      if (error) {
-        console.warn('[cloudLoad] error', error.code, error.message);
-        return;
-      }
-
-      const row = Array.isArray(data) ? data[0] : data;
-      if (row?.state) {
-        state = Object.assign({}, DEFAULT_STATE, row.state);
-        if (!Array.isArray(state.savedBags)) state.savedBags = [];
-        console.log('[cloudLoad] loaded ' + state.inventory.length + ' clubs from cloud');
-      } else {
-        console.log('[cloudLoad] no cloud row — checking localStorage cache');
-        // DB row doesn't exist yet (previous cloudSave may have failed silently).
-        // Recover from the localStorage write-through cache and re-push to the cloud.
-        try {
-          const cached = localStorage.getItem(STORAGE_KEY);
-          if (cached) {
-            const localS = Object.assign({}, DEFAULT_STATE, JSON.parse(cached));
-            if (localS.inventory && localS.inventory.length > 0) {
-              state = localS;
-              cloudSave(); // fire-and-forget: creates the missing DB row
-            }
-          }
-        } catch (e) { console.warn('[cloudLoad] localStorage recovery error', e); }
-      }
-    }
-
-    async function cloudSave() {
-      if (!currentUser) return;
-      // Avoid upsert with onConflict — that requires a unique/PK constraint on user_id
-      // which may not exist in the table schema. Instead: UPDATE if a row exists,
-      // INSERT only if it doesn't. This works regardless of table constraints.
-      const uid = currentUser.id;
-      const payload = { state, updated_at: new Date().toISOString() };
-
-      const { data: existing, error: selErr } = await supabase
-        .from('witb_data')
-        .select('user_id')
-        .eq('user_id', uid)
-        .limit(1);
-
-      if (selErr) { console.warn('Cloud save (select) error', selErr); return; }
-
-      if (existing && existing.length > 0) {
-        const { error } = await supabase
-          .from('witb_data')
-          .update(payload)
-          .eq('user_id', uid);
-        if (error) console.warn('Cloud save (update) error', error);
-      } else {
-        const { error } = await supabase
-          .from('witb_data')
-          .insert({ user_id: uid, ...payload });
-        if (error) console.warn('Cloud save (insert) error', error);
-      }
-    }
-
-    // Debounce cloud saves to avoid a round-trip on every keystroke
-    function save() {
-      // Write to localStorage as a local cache so the page feels instant
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(cloudSave, 600);
-    }
-
-    // ---------- Migration ----------
-    function localStateIsNonEmpty() {
+    // ---------- Storage ----------
+    function load() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return false;
-        const s = JSON.parse(raw);
-        return Array.isArray(s.inventory) && s.inventory.length > 0;
-      } catch { return false; }
-    }
-
-    function loadLocalState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
+        if (raw) state = Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
       } catch {}
-      return { ...DEFAULT_STATE };
+      if (!Array.isArray(state.savedBags)) state.savedBags = [];
     }
 
-    function showMigrateModal(localS, resolve) {
-      const inv = localS.inventory.length;
-      const bags = (localS.savedBags || []).length;
-      const desc = document.getElementById('migrateDesc');
-      desc.textContent = `Your browser has ${inv} club${inv === 1 ? '' : 's'} in inventory` +
-        (bags > 0 ? ` and ${bags} saved bag${bags === 1 ? '' : 's'}` : '') + ' stored locally.';
-      const modal = document.getElementById('migrateModal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      document.getElementById('migrateYes').onclick = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); resolve(true); };
-      document.getElementById('migrateNo').onclick  = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); resolve(false); };
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
-
-    async function handlePostLoginMigration() {
-      const migratedKey = 'witb.migrated.' + currentUser.id;
-      if (localStorage.getItem(migratedKey)) return;
-      if (!localStateIsNonEmpty()) { localStorage.setItem(migratedKey, '1'); return; }
-
-      await cloudLoad();
-      const cloudHasData = state.inventory.length > 0;
-      localStorage.setItem(migratedKey, '1');
-
-      if (cloudHasData) return;
-
-      const localS = loadLocalState();
-      const doMigrate = await new Promise(resolve => showMigrateModal(localS, resolve));
-      if (doMigrate) {
-        state = localS;
-        await cloudSave();
-      }
-    }
-
-    // Manual migration escape hatch — call window._witbMigrate() from the browser console
-    window._witbMigrate = async function() {
-      if (!currentUser) { console.error('Not logged in'); return; }
-      const localS = loadLocalState();
-      if (!localS.inventory.length) { console.error('No local data found'); return; }
-      console.log('Migrating', localS.inventory.length, 'clubs to cloud...');
-      state = localS;
-      await cloudSave();
-      render();
-      console.log('Done! Your clubs are now saved to the cloud.');
-    };
-
-    // ---------- Auth helpers ----------
-    function showAuthOverlay()  { document.getElementById('authOverlay').classList.remove('hidden'); }
-    function hideAuthOverlay()  { document.getElementById('authOverlay').classList.add('hidden'); }
-    function setAuthBusy(busy)  {
-      document.getElementById('authSendBtn').disabled = busy;
-      document.getElementById('authVerifyBtn').disabled = busy;
-    }
-    function showAuthError(step, msg) {
-      const el = document.getElementById(step === 'email' ? 'authEmailError' : 'authOtpError');
-      el.textContent = msg;
-      el.classList.remove('hidden');
-    }
-    function clearAuthErrors() {
-      document.getElementById('authEmailError').classList.add('hidden');
-      document.getElementById('authOtpError').classList.add('hidden');
-    }
-
-    // ---------- Auth flow ----------
-    let pendingEmail = '';
-
-    document.getElementById('authSendBtn').addEventListener('click', async () => {
-      clearAuthErrors();
-      const email = document.getElementById('authEmail').value.trim();
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        showAuthError('email', 'Please enter a valid email address.');
-        return;
-      }
-      try {
-        setAuthBusy(true);
-        const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-        if (error) { showAuthError('email', error.message); return; }
-        pendingEmail = email;
-        document.getElementById('authEmailSent').textContent = email;
-        document.getElementById('authStepEmail').classList.add('hidden');
-        document.getElementById('authStepOtp').classList.remove('hidden');
-        setTimeout(() => document.getElementById('authOtp').focus(), 50);
-      } catch (err) {
-        showAuthError('email', 'An unexpected error occurred: ' + err.message);
-      } finally {
-        setAuthBusy(false);
-      }
-    });
-
-    document.getElementById('authEmail').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('authSendBtn').click();
-    });
-
-    document.getElementById('authVerifyBtn').addEventListener('click', async () => {
-      try {
-        clearAuthErrors();
-        const token = document.getElementById('authOtp').value.trim().replace(/\s/g, '');
-        if (token.length < 6) { showAuthError('otp', 'Please enter the 6-digit code.'); return; }
-        setAuthBusy(true);
-        // Use type 'email' — avoids the internal redirect the SDK triggers for 'magiclink'
-        let result = await supabase.auth.verifyOtp({ email: pendingEmail, token, type: 'email' });
-        if (result.error) {
-          // Fall back to magiclink type if email type rejected the token
-          result = await supabase.auth.verifyOtp({ email: pendingEmail, token, type: 'magiclink' });
-        }
-        setAuthBusy(false);
-        if (result.error) { showAuthError('otp', result.error.message); return; }
-        // Success — the SIGNED_IN event in onAuthStateChange handles data loading
-      } catch (err) {
-        setAuthBusy(false);
-        showAuthError('otp', 'An unexpected error occurred: ' + err.message);
-      }
-    });
-
-    document.getElementById('authOtp').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('authVerifyBtn').click();
-    });
-
-    document.getElementById('authBackBtn').addEventListener('click', () => {
-      clearAuthErrors();
-      document.getElementById('authStepOtp').classList.add('hidden');
-      document.getElementById('authStepEmail').classList.remove('hidden');
-      document.getElementById('authOtp').value = '';
-      setTimeout(() => document.getElementById('authEmail').focus(), 50);
-    });
-
-    // ---------- Auth state listener ----------
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[auth]', event, session ? ('user=' + session.user.id.slice(0,8)) : 'no session');
-
-      if (session?.user) {
-        currentUser = session.user;
-        document.getElementById('userMenuEmail').textContent = currentUser.email;
-        hideAuthOverlay();
-
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-          // IMPORTANT: do NOT await Supabase DB calls directly inside an
-          // onAuthStateChange callback. The SDK holds an internal auth lock
-          // while notifying subscribers; any DB query that needs to attach a
-          // JWT will try to acquire the same lock → deadlock → query hangs
-          // forever. Deferring with setTimeout(0) lets the callback return
-          // first, the lock is released, and then the query runs cleanly.
-          setTimeout(async () => {
-            if (!currentUser) return;
-            console.log('[auth deferred] starting migration + cloudLoad');
-            await handlePostLoginMigration();
-            await cloudLoad();
-            render();
-          }, 0);
-        } else if (event === 'TOKEN_REFRESHED') {
-          // Token silently refreshed — just keep currentUser up to date.
-          // Data is already loaded; no need to re-query.
-          currentUser = session.user;
-        }
-      } else {
-        // ONLY wipe sb-* tokens on an explicit SIGNED_OUT (user pressed sign-out).
-        // Do NOT clear them on INITIAL_SESSION with no session — that fires while
-        // the SDK is mid-refresh and clearing here destroys the refresh token.
-        if (event === 'SIGNED_OUT') {
-          Object.keys(localStorage)
-            .filter(k => k.startsWith('sb-'))
-            .forEach(k => localStorage.removeItem(k));
-        }
-
-        currentUser = null;
-        state = { ...DEFAULT_STATE };
-        document.getElementById('authStepOtp').classList.add('hidden');
-        document.getElementById('authStepEmail').classList.remove('hidden');
-        document.getElementById('authEmail').value = '';
-        document.getElementById('authOtp').value = '';
-        clearAuthErrors();
-        showAuthOverlay();
-        render();
-      }
-    });
-
-    // ---------- User menu ----------
-    document.getElementById('userMenuBtn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      document.getElementById('userMenu').classList.toggle('hidden');
-    });
-    document.addEventListener('click', () => document.getElementById('userMenu').classList.add('hidden'));
-
-    document.getElementById('signOutBtn').addEventListener('click', async () => {
-      document.getElementById('userMenu').classList.add('hidden');
-      // Supabase v2 returns { error } on failure — it does NOT throw. A try/catch is
-      // a no-op here. We must check the returned error explicitly.
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.warn('[signOut] remote signOut failed, signing out locally:', error.message);
-        // Token already invalid (e.g. expired, rotated). Clear locally so the user
-        // is never permanently stuck on a broken session.
-        await supabase.auth.signOut({ scope: 'local' });
-      }
-    });
 
     // ---------- Helpers ----------
     function uid(prefix = 'c_') { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -1198,8 +831,7 @@
     });
 
     // ---------- Boot ----------
-    // onAuthStateChange fires INITIAL_SESSION on page load, which handles restoring the
-    // session and loading data. No separate boot logic needed.
+    load();
     render();
   })();
   </script>

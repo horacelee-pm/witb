@@ -179,12 +179,19 @@
             </label>
             <label data-field="length" class="block">
               <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Length (in)</span>
-              <input name="length" type="number" step="0.25" placeholder="42" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+              <input name="length" type="number" step="any" placeholder="42" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
             </label>
             <label data-field="carry" class="block">
               <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Carry (yds)</span>
               <input name="carry" type="number" step="1" placeholder="175" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
             </label>
+          </div>
+          <div id="ironSpecsWrap" class="col-span-2 hidden">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Per-club specs</span>
+            <div class="mt-1 grid grid-cols-4 gap-2 text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+              <span></span><span>Loft °</span><span>Length in</span><span>Carry yd</span>
+            </div>
+            <div id="ironSpecsTable" class="mt-1 space-y-1.5"></div>
           </div>
         </div>
         <div class="flex items-center justify-between pt-2 gap-2">
@@ -252,6 +259,17 @@
     function shortIronNumber(n)    { if (!n) return ''; if (n === 'Pitching wedge') return 'PW'; return n.replace(' iron', 'i'); }
     function clubLabel(c)          { if (c.category === 'Iron Set' && c.startNumber && c.endNumber) return `${shortIronNumber(c.startNumber)}–${shortIronNumber(c.endNumber)}`; return c.number || c.category || 'Club'; }
     function clubsRepresented(c)   { if (!c) return 0; if (c.category === 'Iron Set') return ironSetCount(c.startNumber, c.endNumber); return 1; }
+    function ironSetRanges(c) {
+      const specs = c.ironSpecs || {};
+      const lofts   = Object.values(specs).map(s => s.loft).filter(v => v !== '' && v != null && !isNaN(v));
+      const carries = Object.values(specs).map(s => s.carry).filter(v => v !== '' && v != null && !isNaN(v));
+      const range = (arr, suffix) => {
+        if (!arr.length) return '';
+        const min = Math.min(...arr), max = Math.max(...arr);
+        return min === max ? `${min}${suffix}` : `${min}–${max}${suffix}`;
+      };
+      return { loftRange: range(lofts, '°'), carryRange: range(carries, ' yd') };
+    }
     function physicalClubCount(ids){ return (ids || []).reduce((n, id) => n + clubsRepresented(byId(id)), 0); }
 
     // ---------- State ----------
@@ -331,6 +349,9 @@
       if (c.category === 'Iron Set') {
         const n = ironSetCount(c.startNumber, c.endNumber);
         if (n > 0) parts.push(`${n} clubs`);
+        const { loftRange, carryRange } = ironSetRanges(c);
+        if (loftRange) parts.push(loftRange);
+        if (carryRange) parts.push(carryRange);
         return parts.join(' · ');
       }
       if (c.loft)   parts.push(c.loft + '°');
@@ -753,6 +774,8 @@
     const modalTitle = $('#modalTitle');
     const deleteBtn  = $('#deleteBtn');
 
+    let editingClub = null;
+
     function applyCategoryMode() {
       const cat = form.querySelector('[name="category"]').value;
       const isPutter  = (cat === 'Putter');
@@ -768,11 +791,55 @@
       ['loft', 'carry'].forEach(n => setHidden(n, isPutter || isIronSet));
       setHidden('length', isIronSet);
       ['startNumber', 'endNumber'].forEach(n => setHidden(n, !isIronSet));
+      if (isIronSet) renderIronSpecRows(); else $('#ironSpecsWrap').classList.add('hidden');
+    }
+
+    function getCurrentIronSpecs() {
+      const specs = {};
+      $('#ironSpecsTable').querySelectorAll('[data-iron]').forEach(row => {
+        const n = row.dataset.iron;
+        const loft   = row.querySelector('[data-spec="loft"]').value;
+        const length = row.querySelector('[data-spec="length"]').value;
+        const carry  = row.querySelector('[data-spec="carry"]').value;
+        specs[n] = {
+          loft:   loft   === '' ? '' : Number(loft),
+          length: length === '' ? '' : Number(length),
+          carry:  carry  === '' ? '' : Number(carry)
+        };
+      });
+      return specs;
+    }
+
+    function renderIronSpecRows() {
+      const wrap  = $('#ironSpecsWrap');
+      const table = $('#ironSpecsTable');
+      const startVal = form.querySelector('[name="startNumber"]').value;
+      const endVal   = form.querySelector('[name="endNumber"]').value;
+      const si = ironIndex(startVal), ei = ironIndex(endVal);
+      if (si < 0 || ei < 0 || si > ei) {
+        wrap.classList.add('hidden');
+        table.innerHTML = '';
+        return;
+      }
+      const nums = IRON_NUMBERS.slice(si, ei + 1);
+      const current  = getCurrentIronSpecs();
+      const existing = (editingClub && editingClub.ironSpecs) || {};
+      table.innerHTML = nums.map(n => {
+        const spec = current[n] || existing[n] || {};
+        return `<div class="grid grid-cols-4 gap-2 items-center" data-iron="${n}">
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-300">${shortIronNumber(n)}</span>
+          <input type="number" step="0.5" data-spec="loft" value="${spec.loft ?? ''}" placeholder="—" class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          <input type="number" step="any" data-spec="length" value="${spec.length ?? ''}" placeholder="—" class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          <input type="number" step="1" data-spec="carry" value="${spec.carry ?? ''}" placeholder="—" class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+        </div>`;
+      }).join('');
+      wrap.classList.remove('hidden');
     }
 
     function openModal(club) {
       form.reset();
       const field = (name) => form.querySelector(`[name="${name}"]`);
+      editingClub = club || null;
       if (club) {
         modalTitle.textContent = 'Edit club';
         deleteBtn.classList.remove('hidden');
@@ -798,6 +865,8 @@
     $('#modalClose').addEventListener('click', closeModal);
     $('#cancelBtn').addEventListener('click', closeModal);
     form.querySelector('[name="category"]').addEventListener('change', applyCategoryMode);
+    form.querySelector('[name="startNumber"]').addEventListener('change', renderIronSpecRows);
+    form.querySelector('[name="endNumber"]').addEventListener('change', renderIronSpecRows);
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
 
@@ -818,9 +887,11 @@
         const si = ironIndex(data.startNumber), ei = ironIndex(data.endNumber);
         if (si > ei) { alert(`Starting club (${data.startNumber}) must come before or equal to ending club (${data.endNumber}).`); return; }
         data.loft = ''; data.carry = ''; data.number = ''; data.length = '';
+        data.ironSpecs = getCurrentIronSpecs();
       } else if (data.category !== 'Putter') {
         data.startNumber = ''; data.endNumber = '';
       }
+      if (data.category !== 'Iron Set') data.ironSpecs = '';
       if (data.id) {
         const i = state.inventory.findIndex(c => c.id === data.id);
         if (i >= 0) state.inventory[i] = { ...state.inventory[i], ...data };

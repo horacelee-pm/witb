@@ -105,6 +105,11 @@
             <option>Driver</option><option>Wood</option><option>Hybrid</option>
             <option>Iron</option><option>Iron Set</option><option>Wedge</option><option>Putter</option>
           </select>
+          <select id="handFilter" class="text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="">L/R</option>
+            <option value="Right">RH</option>
+            <option value="Left">LH</option>
+          </select>
           <div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 overflow-hidden text-slate-500 dark:text-slate-400">
             <button data-view-btn="card" id="viewCardBtn" title="Card view" class="px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
               <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 3h6v6H3V3zm0 8h6v6H3v-6zm8-8h6v6h-6V3zm0 8h6v6h-6v-6z"/></svg>
@@ -150,6 +155,13 @@
               <option value="">Select…</option>
               <option>Driver</option><option>Wood</option><option>Hybrid</option>
               <option>Iron</option><option>Iron Set</option><option>Wedge</option><option>Putter</option>
+            </select>
+          </label>
+          <label class="block col-span-2 sm:col-span-1">
+            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Handedness</span>
+            <select name="handedness" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="Right">Right</option>
+              <option value="Left">Left</option>
             </select>
           </label>
           <label data-field="number" class="block col-span-2 sm:col-span-1">
@@ -258,6 +270,7 @@
     function ironSetCount(s, e)    { const i = ironIndex(s), j = ironIndex(e); if (i < 0 || j < 0) return 0; return Math.abs(j - i) + 1; }
     function shortIronNumber(n)    { if (!n) return ''; if (n === 'Pitching wedge') return 'PW'; return n.replace(' iron', 'i'); }
     function clubLabel(c)          { if (c.category === 'Iron Set' && c.startNumber && c.endNumber) return `${shortIronNumber(c.startNumber)}–${shortIronNumber(c.endNumber)}`; return c.number || c.category || 'Club'; }
+    function handLabel(c)          { return (c && c.handedness === 'Left') ? 'LH' : 'RH'; }
     function clubsRepresented(c)   { if (!c) return 0; if (c.category === 'Iron Set') return ironSetCount(c.startNumber, c.endNumber); return 1; }
     function ironSetRanges(c) {
       const specs = c.ironSpecs || {};
@@ -370,6 +383,7 @@
             <div class="min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 ${badge}">${escape(c.category || '—')}</span>
+                <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">${handLabel(c)}</span>
                 ${c.category !== 'Driver' && c.category !== 'Putter' ? `<span class="text-sm font-semibold truncate">${escape(clubLabel(c))}</span>` : ''}
               </div>
               <div class="mt-0.5 text-sm text-slate-600 dark:text-slate-400 truncate">${escape(c.brand || '')} ${escape(c.model || '')}</div>
@@ -400,6 +414,7 @@
         <div class="club-card group flex items-center gap-3 rounded-lg border px-3 py-2 hover:shadow-sm transition cursor-pointer ${inB ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-700' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800'}"
              draggable="${!inB}" data-id="${c.id}" data-action="edit" title="Click to edit">
           <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 shrink-0 ${badge}">${escape(c.category || '—')}</span>
+          <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 shrink-0 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">${handLabel(c)}</span>
           <div class="min-w-0 flex-1 flex items-baseline gap-2 flex-wrap">
             ${c.category !== 'Driver' && c.category !== 'Putter' ? `<span class="text-sm font-semibold truncate">${escape(clubLabel(c))}</span>` : ''}
             <span class="text-sm text-slate-600 dark:text-slate-400 truncate">${escape(c.brand || '')} ${escape(c.model || '')}</span>
@@ -427,6 +442,7 @@
         <div class="club-card group flex items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2 hover:border-emerald-300 dark:hover:border-emerald-800 cursor-pointer transition"
              draggable="true" data-id="${c.id}" data-from="bag" data-action="edit" title="Click to edit">
           <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 ${badge}">${escape(c.category || '—')}</span>
+          <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">${handLabel(c)}</span>
           <div class="min-w-0 flex-1">
             <div class="text-sm font-medium truncate">${c.category !== 'Driver' && c.category !== 'Putter' ? `${escape(clubLabel(c))} <span class="text-slate-500 dark:text-slate-400 font-normal">· ${escape(c.brand || '')} ${escape(c.model || '')}</span>` : `${escape(c.brand || '')} ${escape(c.model || '')}`}</div>
             <div class="text-xs text-slate-500 dark:text-slate-400">${specLine(c) || '<span class="opacity-50">No specs</span>'}</div>
@@ -489,8 +505,10 @@
 
       const search = $('#searchInput').value.trim().toLowerCase();
       const cat = $('#categoryFilter').value;
+      const hand = $('#handFilter').value;
       const filtered = state.inventory
         .filter(c => !cat || c.category === cat)
+        .filter(c => !hand || (c.handedness === 'Left' ? 'Left' : 'Right') === hand)
         .filter(c => !search || [c.brand, c.model, c.number, c.category, c.startNumber, c.endNumber].some(v => (v || '').toLowerCase().includes(search)))
         .sort(categorySort);
 
@@ -749,6 +767,7 @@
 
     $('#searchInput').addEventListener('input', render);
     $('#categoryFilter').addEventListener('change', render);
+    $('#handFilter').addEventListener('change', render);
 
     // ---------- View toggle ----------
     function updateViewToggleUI() {
@@ -847,10 +866,12 @@
           const el = field(k);
           if (el) el.value = club[k] ?? '';
         }
+        field('handedness').value = club.handedness === 'Left' ? 'Left' : 'Right';
       } else {
         modalTitle.textContent = 'Add club';
         deleteBtn.classList.add('hidden');
         field('id').value = '';
+        field('handedness').value = 'Right';
       }
       applyCategoryMode();
       modal.classList.remove('hidden');
@@ -874,6 +895,7 @@
       e.preventDefault();
       const data = Object.fromEntries(new FormData(form).entries());
       const num = (v) => (v === '' || v == null) ? '' : Number(v);
+      data.handedness = data.handedness === 'Left' ? 'Left' : 'Right';
       data.brand  = data.brand?.trim();
       data.model  = data.model?.trim();
       data.number = data.number?.trim();

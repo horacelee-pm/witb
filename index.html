@@ -308,26 +308,43 @@
     function inBag(id) { return state.bag.includes(id); }
     function bagClubs(){ return state.bag.map(byId).filter(Boolean); }
 
+    function parseLoft(c) {
+      if (c.category === 'Iron Set') {
+        const specs = c.ironSpecs || {};
+        const ss = specs[c.startNumber];
+        const v = ss ? parseFloat(ss.loft) : NaN;
+        return isFinite(v) ? v : null;
+      }
+      const v = parseFloat(c.loft);
+      return isFinite(v) ? v : null;
+    }
+
     function categorySort(a, b) {
       const ca = CATEGORY_ORDER.indexOf(a.category);
       const cb = CATEGORY_ORDER.indexOf(b.category);
       if (ca !== cb) return ca - cb;
-      if (a.category === 'Iron Set') {
-        const startCmp = ironIndex(a.startNumber) - ironIndex(b.startNumber);
-        if (startCmp !== 0) return startCmp;
-        const endCmp = ironIndex(a.endNumber) - ironIndex(b.endNumber);
-        if (endCmp !== 0) return endCmp;
+
+      // For these categories, primary sort is loft ascending (lowest first)
+      const loftCategories = ['Driver', 'Wood', 'Hybrid', 'Iron Set', 'Iron', 'Wedge'];
+      if (loftCategories.includes(a.category)) {
+        const la = parseLoft(a), lb = parseLoft(b);
+        if (la !== null && lb !== null && la !== lb) return la - lb;
+        // Fall back when loft is equal or missing for either club
+        if (a.category === 'Iron Set') {
+          const startCmp = ironIndex(a.startNumber) - ironIndex(b.startNumber);
+          if (startCmp !== 0) return startCmp;
+          const endCmp = ironIndex(a.endNumber) - ironIndex(b.endNumber);
+          if (endCmp !== 0) return endCmp;
+        } else {
+          const numCmp = (a.number || '').localeCompare(b.number || '', undefined, { numeric: true });
+          if (numCmp !== 0) return numCmp;
+        }
         const brandCmp = (a.brand || '').localeCompare(b.brand || '');
         if (brandCmp !== 0) return brandCmp;
         return (a.model || '').localeCompare(b.model || '');
       }
-      if (a.category === 'Driver' || a.category === 'Putter') {
-        const brandCmp = (a.brand || '').localeCompare(b.brand || '');
-        if (brandCmp !== 0) return brandCmp;
-        return (a.model || '').localeCompare(b.model || '');
-      }
-      const numCmp = (a.number || '').localeCompare(b.number || '', undefined, { numeric: true });
-      if (numCmp !== 0) return numCmp;
+
+      // Putter: sort by brand/model
       const brandCmp = (a.brand || '').localeCompare(b.brand || '');
       if (brandCmp !== 0) return brandCmp;
       return (a.model || '').localeCompare(b.model || '');

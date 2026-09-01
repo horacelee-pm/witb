@@ -42,6 +42,13 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5">
+          <span class="hidden md:inline text-[10px] uppercase tracking-widest font-bold text-emerald-400">Mode</span>
+          <div id="modeToggle" class="relative inline-flex items-center rounded-full bg-emerald-950/70 p-1 ring-2 ring-emerald-400 shadow-lg shadow-emerald-950/40">
+            <button data-mode-btn="live" id="modeLiveBtn" title="Your own clubs &amp; bags, saved in this browser" class="rounded-full px-3.5 py-1.5 text-xs font-bold tracking-wide transition-all duration-150">Live</button>
+            <button data-mode-btn="demo" id="modeDemoBtn" title="Sample data — the same for every visitor; edits don't save" class="rounded-full px-3.5 py-1.5 text-xs font-bold tracking-wide transition-all duration-150">Demo</button>
+          </div>
+        </div>
         <span id="bagCounter" class="text-xs sm:text-sm font-medium px-2.5 py-1 rounded-full bg-emerald-700 dark:bg-emerald-900 text-emerald-100 dark:text-emerald-200">
           0 / 14 in bag
         </span>
@@ -63,6 +70,11 @@
       </div>
     </div>
   </header>
+
+  <!-- Demo mode banner -->
+  <div id="demoBanner" class="hidden bg-amber-100 dark:bg-amber-900/40 border-b border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs sm:text-sm px-4 py-2 text-center">
+    You're viewing <strong>demo data</strong> — the same sample clubs and bags everyone sees. Feel free to add, edit, or rearrange; nothing here is saved, and reloading (or switching to Live) resets it.
+  </div>
 
   <!-- ============== MAIN ============== -->
   <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -263,7 +275,53 @@
 
     const STORAGE_KEY  = 'witb.v1';
     const VIEW_KEY     = 'witb.viewMode';
+    const MODE_KEY     = 'witb.mode';
     let viewMode = localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'card';
+    let mode = localStorage.getItem(MODE_KEY) === 'live' ? 'live' : 'demo'; // demo by default until the visitor chooses Live
+
+    // ---------- Demo data ----------
+    // Same sample set for every visitor, baked into the app (no backend needed since it's
+    // read-only and identical everywhere). Demo edits are never written back to this constant.
+    const DEMO_DATA = {
+      inventory: [
+        { id: 'c_monqqncder55n', loft: 11, brand: 'Titleist', carry: 200, model: 'GT3', length: 45.5, number: 'Driver', category: 'Driver', endNumber: '', startNumber: '' },
+        { id: 'c_monqqncddxdxs', loft: '', brand: 'Ping', carry: '', model: 'i525', length: '', number: '', category: 'Iron Set', endNumber: 'Pitching wedge', startNumber: '5 iron',
+          ironSpecs: {
+            '5 iron': { loft: 24, length: 38.25, carry: 160 },
+            '6 iron': { loft: 27, length: 37.625, carry: 150 },
+            '7 iron': { loft: 30.5, length: 37, carry: 140 },
+            '8 iron': { loft: 35, length: 36.5, carry: 130 },
+            '9 iron': { loft: 40, length: 36, carry: 120 },
+            'Pitching wedge': { loft: 45, length: 35.5, carry: 110 }
+          }
+        },
+        { id: 'c_monqqncdnxsy8', loft: 56, brand: 'Titleist', carry: 70, model: 'Vokey SM9 D Grind', length: 35.25, number: 'Sand wedge', category: 'Wedge', endNumber: '', startNumber: '', handedness: 'Right', ironSpecs: '' },
+        { id: 'c_monqu6i08z268', loft: 20, brand: 'Ping', carry: 180, model: 'G430', length: 42, number: '7 wood', category: 'Wood', endNumber: '', startNumber: '' },
+        { id: 'c_monquxp6twgl1', loft: 50.5, brand: 'Ping', carry: 95, model: 'i525', length: 35.5, number: 'Gap wedge', category: 'Wedge', endNumber: '', startNumber: '', handedness: 'Right', ironSpecs: '' },
+        { id: 'c_monqvocqcxohp', loft: 22, brand: 'Ping', carry: 170, model: 'G430', length: 39.75, number: '4 hybrid', category: 'Hybrid', endNumber: '', startNumber: '' },
+        { id: 'c_monqwiamwewlu', loft: '', brand: 'Mizuno', carry: '', model: 'MP-60', length: '', number: '', category: 'Iron Set', endNumber: 'Pitching wedge', startNumber: '5 iron',
+          ironSpecs: {
+            '5 iron': { loft: 27, length: 37.5, carry: 160 },
+            '6 iron': { loft: 31, length: 37, carry: 150 },
+            '7 iron': { loft: 35, length: 36.5, carry: 130 },
+            '8 iron': { loft: 38, length: 36, carry: 120 },
+            '9 iron': { loft: 43, length: 35.5, carry: 110 },
+            'Pitching wedge': { loft: 47, length: 35.25, carry: 100 }
+          },
+          handedness: 'Right'
+        },
+        { id: 'c_monqy72sejn1p', loft: 52, brand: 'Titleist', carry: 85, model: 'Vokey SM7 F Grind', length: 35.5, number: 'Gap wedge', category: 'Wedge', endNumber: '', startNumber: '', handedness: 'Right', ironSpecs: '' },
+        { id: 'c_monqyiz8xfhr5', loft: 56, brand: 'Titleist', carry: 70, model: 'Vokey SM6 F Grind', length: 35.25, number: 'Sand wedge', category: 'Wedge', endNumber: '', startNumber: '', handedness: 'Right', ironSpecs: '' },
+        { id: 'c_monrxnigixzxm', loft: 15, brand: 'Ping', carry: 190, model: 'G430', length: 43, number: '3 wood', category: 'Wood', endNumber: '', startNumber: '', handedness: 'Right', ironSpecs: '' },
+        { id: 'c_mtj7v5dotywxc', brand: 'Odyssey', model: 'White Hot #5 CS', category: 'Putter', handedness: 'Right', length: 34, number: 'Putter', loft: '', carry: '', startNumber: '', endNumber: '', ironSpecs: '' }
+      ],
+      // Ping set loaded into the current bag by default so demo visitors see a filled bag right away.
+      bag: ['c_monqqncder55n','c_monqu6i08z268','c_monqvocqcxohp','c_monqqncddxdxs','c_monquxp6twgl1','c_monqqncdnxsy8','c_monrxnigixzxm','c_mtj7v5dotywxc'],
+      savedBags: [
+        { id: 'b_monqucj1lrgw1', name: 'Ping set', clubs: ['c_monqqncder55n','c_monqu6i08z268','c_monqvocqcxohp','c_monqqncddxdxs','c_monquxp6twgl1','c_monqqncdnxsy8','c_monrxnigixzxm','c_mtj7v5dotywxc'], updatedAt: 1788300373403 },
+        { id: 'b_monrwezriclj9', name: 'Mizuno par 3 set', clubs: ['c_monqyiz8xfhr5','c_monqy72sejn1p','c_monqwiamwewlu','c_mtj7v5dotywxc'], updatedAt: 1788300392458 }
+      ]
+    };
     const CATEGORY_ORDER = ['Driver', 'Wood', 'Hybrid', 'Iron', 'Iron Set', 'Wedge', 'Putter'];
     const IRON_NUMBERS   = ['3 iron', '4 iron', '5 iron', '6 iron', '7 iron', '8 iron', '9 iron', 'Pitching wedge'];
     function ironIndex(n)          { return IRON_NUMBERS.indexOf(n); }
@@ -291,15 +349,33 @@
 
     // ---------- Storage ----------
     function load() {
+      if (mode === 'demo') {
+        // Fresh clone every time — nothing here ever reads or writes localStorage.
+        state = JSON.parse(JSON.stringify(DEMO_DATA));
+        if (!Array.isArray(state.bag)) state.bag = [];
+        if (!Array.isArray(state.savedBags)) state.savedBags = [];
+        return;
+      }
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) state = Object.assign({}, DEFAULT_STATE, JSON.parse(raw));
-      } catch {}
+        state = raw ? Object.assign({}, DEFAULT_STATE, JSON.parse(raw)) : JSON.parse(JSON.stringify(DEFAULT_STATE));
+      } catch {
+        state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      }
       if (!Array.isArray(state.savedBags)) state.savedBags = [];
     }
 
     function save() {
+      if (mode === 'demo') return; // demo edits live only in memory for this page load
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function setMode(next) {
+      if ((next !== 'demo' && next !== 'live') || next === mode) return;
+      mode = next;
+      localStorage.setItem(MODE_KEY, mode);
+      load();
+      render();
     }
 
     // ---------- Helpers ----------
@@ -546,6 +622,7 @@
         }
       }
       updateViewToggleUI();
+      updateModeToggleUI();
 
       const bag = bagClubs().sort(categorySort);
       const totalClubs = physicalClubCount(state.bag);
@@ -803,6 +880,26 @@
         render();
       });
     });
+
+    // ---------- Mode toggle (Live / Demo) ----------
+    function updateModeToggleUI() {
+      const liveActive = mode === 'live';
+      const liveBtn = $('#modeLiveBtn');
+      const demoBtn = $('#modeDemoBtn');
+      liveBtn.classList.toggle('bg-white', liveActive);
+      liveBtn.classList.toggle('text-emerald-900', liveActive);
+      liveBtn.classList.toggle('shadow', liveActive);
+      liveBtn.classList.toggle('text-emerald-300', !liveActive);
+      liveBtn.classList.toggle('hover:text-white', !liveActive);
+      demoBtn.classList.toggle('bg-amber-400', !liveActive);
+      demoBtn.classList.toggle('text-amber-950', !liveActive);
+      demoBtn.classList.toggle('shadow', !liveActive);
+      demoBtn.classList.toggle('text-emerald-300', liveActive);
+      demoBtn.classList.toggle('hover:text-white', liveActive);
+      $('#demoBanner').classList.toggle('hidden', mode !== 'demo');
+    }
+    $('#modeLiveBtn').addEventListener('click', () => setMode('live'));
+    $('#modeDemoBtn').addEventListener('click', () => setMode('demo'));
 
     // ---------- Modal (add/edit) ----------
     const modal = $('#modal');

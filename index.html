@@ -971,6 +971,10 @@
 
     function openModal(club) {
       form.reset();
+      // Clear leftover per-club spec rows from whichever club was last edited — otherwise
+      // renderIronSpecRows() below can read stale values for iron numbers that overlap
+      // between this club and the previous one (current[n] is checked before existing[n]).
+      $('#ironSpecsTable').innerHTML = '';
       const field = (name) => form.querySelector(`[name="${name}"]`);
       editingClub = club || null;
       if (club) {

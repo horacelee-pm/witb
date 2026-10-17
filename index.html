@@ -130,7 +130,23 @@
               <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4h14a1 1 0 110 2H3a1 1 0 110-2zm0 5h14a1 1 0 110 2H3a1 1 0 110-2zm0 5h14a1 1 0 110 2H3a1 1 0 110-2z"/></svg>
             </button>
           </div>
+          <button id="selectModeBtn" type="button" title="Select multiple clubs"
+            class="inline-flex items-center gap-1 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1H4zm9.707 4.707a1 1 0 00-1.414-1.414L9 9.586 7.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <span id="selectModeLabel">Select</span>
+          </button>
         </div>
+      </div>
+      <div id="selectBar" class="hidden mb-3 items-center gap-x-3 gap-y-2 flex-wrap rounded-lg border border-rose-200 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950/30 px-3 py-2 text-sm">
+        <span id="selectCount" class="font-medium text-slate-700 dark:text-slate-200">0 selected</span>
+        <button id="selectAllBtn" type="button" class="font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300">Select all</button>
+        <button id="selectNoneBtn" type="button" class="font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">Clear</button>
+        <div class="flex-1"></div>
+        <button id="bulkDeleteBtn" type="button" disabled
+          class="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1.5 shadow-sm transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-rose-600">
+          <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+          Delete selected
+        </button>
       </div>
       <div id="inventoryList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
       <div id="invEmpty" class="hidden text-center py-12 text-slate-400 dark:text-slate-500 border border-dashed rounded-2xl border-slate-300 dark:border-slate-700">
@@ -344,6 +360,9 @@
 
     // ---------- State ----------
     let state = { inventory: [], bag: [], savedBags: [] };
+    let selectMode = false;          // multi-select for bulk delete
+    const selected = new Set();      // club ids checked in select mode
+    let lastFiltered = [];           // clubs currently visible in the inventory list
     const DEFAULT_STATE = { inventory: [], bag: [], savedBags: [] };
 
     // ---------- Storage ----------
@@ -372,6 +391,7 @@
     function setMode(next) {
       if ((next !== 'demo' && next !== 'live') || next === mode) return;
       mode = next;
+      selectMode = false; selected.clear();
       localStorage.setItem(MODE_KEY, mode);
       load();
       render();
@@ -465,15 +485,22 @@
       return parts.join(' · ');
     }
 
+    function selectBox(id) {
+      if (!selectMode) return '';
+      const on = selected.has(id);
+      return `<span class="inline-flex w-4 h-4 shrink-0 items-center justify-center rounded border ${on ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-400 dark:border-slate-500 bg-white dark:bg-slate-900'}">${on ? '<svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : ''}</span>`;
+    }
+
     function inventoryCard(c) {
       const inB = inBag(c.id);
       const badge = clubBadgeColor(c.category);
       return `
-        <div class="club-card group relative rounded-xl border p-3 sm:p-4 hover:shadow-md transition cursor-pointer ${inB ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-700' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800'}"
-             draggable="${!inB}" data-id="${c.id}" data-action="edit" title="Click to edit">
+        <div class="club-card group relative rounded-xl border p-3 sm:p-4 hover:shadow-md transition cursor-pointer ${inB ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-700' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800'} ${selectMode && selected.has(c.id) ? 'ring-2 ring-rose-500 dark:ring-rose-500' : ''}"
+             draggable="${!inB && !selectMode}" data-id="${c.id}" data-action="${selectMode ? 'toggleSelect' : 'edit'}" title="${selectMode ? 'Click to select' : 'Click to edit'}" ${selectMode ? `role="checkbox" aria-checked="${selected.has(c.id)}"` : ''}>
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
+                ${selectBox(c.id)}
                 <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 ${badge}">${escape(c.category || '—')}</span>
                 <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">${handLabel(c)}</span>
                 ${c.category !== 'Driver' && c.category !== 'Putter' ? `<span class="text-sm font-semibold truncate">${escape(clubLabel(c))}</span>` : ''}
@@ -481,7 +508,7 @@
               <div class="mt-0.5 text-sm text-slate-600 dark:text-slate-400 truncate">${escape(c.brand || '')} ${escape(c.model || '')}</div>
               <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">${specLine(c) || '<span class="opacity-50">No specs</span>'}</div>
             </div>
-            <div class="flex items-center gap-1 shrink-0">
+            <div class="flex items-center gap-1 shrink-0 ${selectMode ? 'hidden' : ''}">
               <button data-action="edit" data-id="${c.id}" title="Edit" draggable="false"
                 class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-9.9 9.9-3.182.354.354-3.182 9.9-9.9z"/></svg>
@@ -503,8 +530,9 @@
       const inB = inBag(c.id);
       const badge = clubBadgeColor(c.category);
       return `
-        <div class="club-card group flex items-center gap-3 rounded-lg border px-3 py-2 hover:shadow-sm transition cursor-pointer ${inB ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-700' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800'}"
-             draggable="${!inB}" data-id="${c.id}" data-action="edit" title="Click to edit">
+        <div class="club-card group flex items-center gap-3 rounded-lg border px-3 py-2 hover:shadow-sm transition cursor-pointer ${inB ? 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-700' : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800'} ${selectMode && selected.has(c.id) ? 'ring-2 ring-rose-500 dark:ring-rose-500' : ''}"
+             draggable="${!inB && !selectMode}" data-id="${c.id}" data-action="${selectMode ? 'toggleSelect' : 'edit'}" title="${selectMode ? 'Click to select' : 'Click to edit'}" ${selectMode ? `role="checkbox" aria-checked="${selected.has(c.id)}"` : ''}>
+          ${selectBox(c.id)}
           <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 shrink-0 ${badge}">${escape(c.category || '—')}</span>
           <span class="text-[10px] uppercase tracking-wide font-semibold rounded px-1.5 py-0.5 shrink-0 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">${handLabel(c)}</span>
           <div class="min-w-0 flex-1 flex items-baseline gap-2 flex-wrap">
@@ -512,7 +540,7 @@
             <span class="text-sm text-slate-600 dark:text-slate-400 truncate">${escape(c.brand || '')} ${escape(c.model || '')}</span>
             <span class="text-xs text-slate-500 dark:text-slate-400">${specLine(c)}</span>
           </div>
-          <div class="flex items-center gap-1 shrink-0">
+          <div class="flex items-center gap-1 shrink-0 ${selectMode ? 'hidden' : ''}">
             <button data-action="edit" data-id="${c.id}" title="Edit" draggable="false"
               class="p-1.5 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
               <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-9.9 9.9-3.182.354.354-3.182 9.9-9.9z"/></svg>
@@ -603,6 +631,10 @@
         .filter(c => !hand || (c.handedness === 'Left' ? 'Left' : 'Right') === hand)
         .filter(c => !search || [c.brand, c.model, c.number, c.category, c.startNumber, c.endNumber].some(v => (v || '').toLowerCase().includes(search)))
         .sort(categorySort);
+      lastFiltered = filtered;
+      for (const id of [...selected]) if (!byId(id)) selected.delete(id);
+      if (state.inventory.length === 0) selectMode = false;
+      updateSelectUI();
 
       invCount.textContent = `(${state.inventory.length})`;
       if (state.inventory.length === 0) {
@@ -803,6 +835,8 @@
         return;
       }
       if (justDragged) return;
+      const selCard = e.target.closest('[data-action="toggleSelect"]');
+      if (selCard) { toggleSelect(selCard.dataset.id); return; }
       const card = e.target.closest('[data-action="edit"]');
       if (card) openModal(byId(card.dataset.id));
     });
@@ -861,6 +895,58 @@
     $('#searchInput').addEventListener('input', render);
     $('#categoryFilter').addEventListener('change', render);
     $('#handFilter').addEventListener('change', render);
+
+    // ---------- Multi-select / bulk delete ----------
+    function updateSelectUI() {
+      const bar = $('#selectBar');
+      bar.classList.toggle('hidden', !selectMode);
+      bar.classList.toggle('flex', selectMode);
+      $('#selectModeBtn').classList.toggle('hidden', state.inventory.length === 0);
+      $('#selectModeLabel').textContent = selectMode ? 'Cancel' : 'Select';
+      $('#selectModeBtn').classList.toggle('ring-2', selectMode);
+      $('#selectModeBtn').classList.toggle('ring-rose-400', selectMode);
+      const n = selected.size;
+      $('#selectCount').textContent = `${n} selected`;
+      $('#bulkDeleteBtn').disabled = n === 0;
+      const allVisible = lastFiltered.length > 0 && lastFiltered.every(c => selected.has(c.id));
+      $('#selectAllBtn').textContent = allVisible ? 'Deselect all' : 'Select all';
+    }
+    function setSelectMode(on) {
+      selectMode = on;
+      if (!on) selected.clear();
+      render();
+    }
+    function toggleSelect(id) {
+      if (selected.has(id)) selected.delete(id); else selected.add(id);
+      render();
+    }
+    $('#selectModeBtn').addEventListener('click', () => setSelectMode(!selectMode));
+    $('#selectAllBtn').addEventListener('click', () => {
+      const allVisible = lastFiltered.length > 0 && lastFiltered.every(c => selected.has(c.id));
+      lastFiltered.forEach(c => allVisible ? selected.delete(c.id) : selected.add(c.id));
+      render();
+    });
+    $('#selectNoneBtn').addEventListener('click', () => { selected.clear(); render(); });
+    $('#bulkDeleteBtn').addEventListener('click', () => {
+      const ids = [...selected].filter(byId);
+      if (ids.length === 0) return;
+      const inBagCount = ids.filter(inBag).length;
+      const msg = `Delete ${ids.length} club${ids.length === 1 ? '' : 's'} from your inventory?`
+        + (inBagCount ? ` ${inBagCount} ${inBagCount === 1 ? 'is' : 'are'} in the bag and will be removed from it too.` : '')
+        + ' This cannot be undone.';
+      if (!confirm(msg)) return;
+      const del = new Set(ids);
+      state.inventory = state.inventory.filter(c => !del.has(c.id));
+      state.bag = state.bag.filter(x => !del.has(x));
+      selected.clear();
+      selectMode = false;
+      save(); render();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !selectMode) return;
+      if (!$('#modal').classList.contains('hidden') || !$('#saveBagModal').classList.contains('hidden')) return;
+      setSelectMode(false);
+    });
 
     // ---------- View toggle ----------
     function updateViewToggleUI() {
